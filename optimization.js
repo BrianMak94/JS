@@ -62,32 +62,14 @@ function optimizePage() {
 
   // 4. Debloating and Ad Removal
   const unnecessaryElements = document.querySelectorAll(
-    '*' // Select all elements
+    '.ad, .sidebar, .footer, .social-media, .popup, .modal, .overlay, .promotion, .banner, iframe[src*="ads"], div[id^="ad"], script[src*="ads"]'
   );
   unnecessaryElements.forEach(element => {
-    // Apply filtering logic to determine if element should be removed
-    if (shouldRemoveElement(element)) {
-      // Remove placeholders associated with debloated elements if applicable
-      const placeholders = element.querySelectorAll('.placeholder');
-      placeholders.forEach(placeholder => placeholder.remove());
-      element.remove();
-    }
+    // Remove placeholders associated with debloated elements if applicable
+    const placeholders = element.querySelectorAll('.placeholder');
+    placeholders.forEach(placeholder => placeholder.remove());
+    element.remove();
   });
-
-  function shouldRemoveElement(element) {
-    // Customize filtering logic based on your specific needs
-    const blacklistedTags = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'LINK', 'META', 'TITLE'];
-    const blacklistedClasses = ['essential-content', 'important-element']; // Add more as needed
-
-    return (
-      blacklistedTags.includes(element.tagName) ||
-      element.classList.contains('ad') ||
-      element.classList.contains('popup') ||
-      element.classList.contains('overlay') ||
-      // Add more conditions based on your website's structure
-      element.textContent.trim() === '' // Remove empty text nodes
-    );
-  }
 
   // 5. Enhanced Image Optimization
   const images = document.querySelectorAll('img');
