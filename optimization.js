@@ -5,7 +5,15 @@ function optimizePage() {
   viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
   document.head.appendChild(viewportMeta);
 
-  // 2. Image optimization
+  // 2. Prioritize critical CSS (inline or load early)
+  // Example:
+  // <style>
+  //   /* Critical CSS for initial layout */
+  //   body { margin: 0; font-family: sans-serif; }
+  //   /* ... other critical styles */
+  // </style>
+
+  // 3. Image optimization
   const images = document.querySelectorAll('img');
   const imageFragment = document.createDocumentFragment();
 
@@ -47,7 +55,7 @@ function optimizePage() {
 
   document.body.appendChild(imageFragment);
 
-  // 3. Resource loading
+  // 4. Resource loading
   const preloadLinks = document.querySelectorAll('link[rel="preload"]');
   preloadLinks.forEach(link => {
     const clone = link.cloneNode();
@@ -60,7 +68,7 @@ function optimizePage() {
     script.defer = true;
   });
 
-  // 4. Debloating and Ad Removal
+  // 5. Debloating and Ad Removal
   const unnecessaryElements = document.querySelectorAll(
     '.ad, .sidebar, .footer, .social-media, .popup, .modal, .overlay, .promotion, .banner, iframe[src*="ads"], div[id^="ad"], script[src*="ads"]'
   );
@@ -71,7 +79,7 @@ function optimizePage() {
     element.remove();
   });
 
-  // 5. Enhanced Image Optimization
+  // 6. Enhanced Image Optimization
   const images = document.querySelectorAll('img');
   images.forEach(img => {
     const webpSrc = img.src.replace(/\.(jpg|jpeg|png)$/, '.webp');
@@ -85,7 +93,7 @@ function optimizePage() {
     imgTest.src = webpSrc;
   });
 
-  // 6. JavaScript optimization
+  // 7. JavaScript optimization
   // (Minification, combining, and code optimization are typically handled by build tools)
 
   // Lazy load stylesheets
