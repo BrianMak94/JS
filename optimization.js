@@ -37,7 +37,7 @@ function optimizePage() {
     element.remove();
   });
 
-  // 5. Image optimization
+  // 5. Enhanced Image Optimization
   const images = document.querySelectorAll('img');
   const imageFragment = document.createDocumentFragment();
 
@@ -79,21 +79,7 @@ function optimizePage() {
 
   document.body.appendChild(imageFragment);
 
-  // 6. Enhanced Image Optimization
-  const images = document.querySelectorAll('img');
-  images.forEach(img => {
-    const webpSrc = img.src.replace(/\.(jpg|jpeg|png)$/, '.webp');
-    const imgTest = new Image();
-    imgTest.onload = () => {
-      img.src = webpSrc;
-    };
-    imgTest.onerror = () => {
-      // Handle WebP conversion failure
-    };
-    imgTest.src = webpSrc;
-  });
-
-  // 7. JavaScript optimization
+  // 6. JavaScript optimization
   // (Minification, combining, and code optimization are typically handled by build tools)
 
   // Lazy load stylesheets
@@ -121,10 +107,6 @@ function optimizePage() {
     video.autoplay = false;
     video.muted = true; // Optional: Mute videos for a better user experience
   });
-
-  // Remove overlays
-  const overlays = document.querySelectorAll('.overlay, .modal, .popup'); // Adjust selectors as needed
-  overlays.forEach(overlay => overlay.remove());
 
   // Aggressive lazy loading for images
   const imagesToLoadLazily = document.querySelectorAll('img:not([data-src])');
