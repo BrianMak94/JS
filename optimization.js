@@ -1,20 +1,34 @@
 function optimizePage() {
-  // Image optimization
+  // 1. Viewport meta tag
+  const viewportMeta = document.createElement('meta');
+  viewportMeta.name = 'viewport';
+  viewportMeta.content = 'width=device-width, initial-scale=1.0';
+  document.head.appendChild(viewportMeta);
+
+  // 2. Image optimization
   const images = document.querySelectorAll('img');
-  images.forEach(img => {
-    // Lazy loading
+  const imageFragment = document.createDocumentFragment();
+
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i];
+    // Lazy loading with placeholders
     if (img.dataset.src) {
+      const placeholder = document.createElement('img');
+      placeholder.classList.add('placeholder');
+      placeholder.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+      img.parentNode.replaceChild(placeholder, img);
+
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
-            const img = entry.target;
+            const img = entry.target.nextElementSibling;
             img.src = img.dataset.src;
-            observer.unobserve(img);   
-
+            observer.unobserve(entry.target);
+            entry.target.remove();
           }
         });
       });
-      observer.observe(img);
+      observer.observe(placeholder);
     }
 
     // Responsive images
@@ -26,9 +40,14 @@ function optimizePage() {
       img.srcset = `${src} ${width}w`;
       img.sizes = `(max-width: ${width}px) 100vw, ${width}px`;
     }
-  });
 
-  // Resource loading
+    // Append to fragment for batch DOM updates
+    imageFragment.appendChild(img);
+  }
+
+  document.body.appendChild(imageFragment);
+
+  // 3. Resource loading
   const preloadLinks = document.querySelectorAll('link[rel="preload"]');
   preloadLinks.forEach(link => {
     const clone = link.cloneNode();
@@ -41,30 +60,46 @@ function optimizePage() {
     script.defer = true;
   });
 
-  // JavaScript optimization
-  // Minification and combining (usually handled by build tools)
-  // Reduce DOM manipulations (optimize code accordingly)
+  // 4. Debloating
+  const unnecessaryElements = document.querySelectorAll(
+    'comment, meta[name="generator"], script:not([async][defer]), style:not([media="only screen and (max-width: 768px)"]) iframe, .ad, .sidebar, .footer, .social-media'
+  );
+  unnecessaryElements.forEach(element => element.remove());
 
-  const lazyScripts = document.querySelectorAll('script[data-lazy]');
-  const scriptObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const script = entry.target;
-        const src = script.dataset.lazy;
-        const newScript = document.createElement('script');
-        newScript.src = src;
-        document.head.appendChild(newScript);
-        scriptObserver.unobserve(script);
-      }
-    });
+  // 5. Enhanced Image Optimization
+  const images = document.querySelectorAll('img');
+  images.forEach(img => {
+    const webpSrc = img.src.replace(/\.(jpg|jpeg|png)$/, '.webp');
+    const imgTest = new Image();
+    imgTest.onload = () => {
+      img.src = webpSrc;
+    };
+    imgTest.onerror = () => {
+      // Handle WebP conversion failure
+    };
+    imgTest.src = webpSrc;
   });
-  lazyScripts.forEach(script => scriptObserver.observe(script));
 
-  // CSS optimization
-  // Critical CSS extraction (requires more advanced techniques)
-  // Minimize stylesheets (usually handled by build tools)
-  // Optimize CSS delivery (use CDNs and caching)
-  
+  // 6. JavaScript optimization
+  // (Minification, combining, and code optimization are typically handled by build tools)
+
+  // Lazy load stylesheets
+  const lazyStylesheets = document.querySelectorAll('link[rel="stylesheet"][data-lazy]');
+  lazyStylesheets.forEach(link => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const link = entry.target;
+          const href = link.dataset.lazy;
+          const newLink = document.createElement('link');
+          newLink.rel = 'stylesheet';
+          newLink.href = href;
+          document.head.appendChild(newLink);
+          observer.unobserve(link);
+        }
+      });
+    });
+    observer.observe(link);
+  });
 }
 
-optimizePage();
