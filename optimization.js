@@ -60,7 +60,7 @@ function optimizePage() {
     script.defer = true;
   });
 
-  // 4. Debloating
+  // 4. Debloating and Ad Removal
   const unnecessaryElements = document.querySelectorAll(
     'comment, meta[name="generator"], script:not([async][defer]), style:not([media="only screen and (max-width: 768px)"]) iframe, .ad, .sidebar, .footer, .social-media'
   );
@@ -101,5 +101,11 @@ function optimizePage() {
     });
     observer.observe(link);
   });
-}
 
+  // Disable autoplay videos
+  const videos = document.querySelectorAll('video');
+  videos.forEach(video => {
+    video.autoplay = false;
+    video.muted = true; // Optional: Mute videos for a better user experience
+  });
+}
