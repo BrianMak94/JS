@@ -65,7 +65,7 @@ function optimizePage() {
 
   // 4. Debloating and Ad Removal
   const unnecessaryElements = document.querySelectorAll(
-    'comment, meta[name="generator"], script:not([async][defer]), style:not([media="only screen and (max-width: 768px)"]) iframe, .ad, .sidebar, .footer, .social-media'
+    'comment, meta[name="generator"], script:not([async][defer]), style:not([media="only screen and (max-width: 768px)"]) iframe, .ad, .sidebar, .footer, .banner, .popup, .social-media'
   );
   unnecessaryElements.forEach(element => {
     // Remove placeholders associated with debloated elements if applicable
