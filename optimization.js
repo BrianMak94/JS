@@ -108,4 +108,8 @@ function optimizePage() {
     video.autoplay = false;
     video.muted = true; // Optional: Mute videos for a better user experience
   });
+
+  // Remove overlays
+  const overlays = document.querySelectorAll('.overlay, .modal, .popup'); // Adjust selectors as needed
+  overlays.forEach(overlay => overlay.remove());
 }
