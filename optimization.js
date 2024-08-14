@@ -117,4 +117,19 @@ function optimizePage() {
   // Remove overlays
   const overlays = document.querySelectorAll('.overlay, .modal, .popup'); // Adjust selectors as needed
   overlays.forEach(overlay => overlay.remove());
+
+  // Aggressive lazy loading for images
+  const imagesToLoadLazily = document.querySelectorAll('img:not([data-src])');
+  imagesToLoadLazily.forEach(img => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.src; // Trigger image loading
+          observer.unobserve(img);
+        }
+      });
+    });
+    observer.observe(img);
+  });
 }
