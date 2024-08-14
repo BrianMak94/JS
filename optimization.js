@@ -1,8 +1,11 @@
 function optimizePage() {
+  // Performance measurement start
+  const startTime = performance.now();
+
   // 1. Viewport meta tag
   const viewportMeta = document.createElement('meta');
   viewportMeta.name = 'viewport';
-  viewportMeta.content = 'width=device-width, initial-scale=1.0';
+  viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
   document.head.appendChild(viewportMeta);
 
   // 2. Image optimization
@@ -20,14 +23,14 @@ function optimizePage() {
 
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) { // Adjust threshold as needed
             const img = entry.target.nextElementSibling;
             img.src = img.dataset.src;
             observer.unobserve(entry.target);
             entry.target.remove();
           }
         });
-      });
+      }, { threshold: 0.5 }); // Adjust threshold as needed
       observer.observe(placeholder);
     }
 
@@ -49,22 +52,27 @@ function optimizePage() {
 
   // 3. Resource loading
   const preloadLinks = document.querySelectorAll('link[rel="preload"]');
-  preloadLinks.forEach(link => {
+  for (const link of preloadLinks) {
     const clone = link.cloneNode();
     clone.rel = 'prefetch';
     document.head.appendChild(clone);
-  });
+  }
 
   const scripts = document.querySelectorAll('script:not([defer])');
-  scripts.forEach(script => {
+  for (const script of scripts) {
     script.defer = true;
-  });
+  }
 
   // 4. Debloating and Ad Removal
   const unnecessaryElements = document.querySelectorAll(
     'comment, meta[name="generator"], script:not([async][defer]), style:not([media="only screen and (max-width: 768px)"]) iframe, .ad, .sidebar, .footer, .social-media'
   );
-  unnecessaryElements.forEach(element => element.remove());
+  unnecessaryElements.forEach(element => {
+    // Remove placeholders associated with debloated elements if applicable
+    const placeholders = element.querySelectorAll('.placeholder');
+    placeholders.forEach(placeholder => placeholder.remove());
+    element.remove();
+  });
 
   // 5. Enhanced Image Optimization
   const images = document.querySelectorAll('img');
@@ -88,7 +96,7 @@ function optimizePage() {
   lazyStylesheets.forEach(link => {
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
           const link = entry.target;
           const href = link.dataset.lazy;
           const newLink = document.createElement('link');
@@ -98,7 +106,7 @@ function optimizePage() {
           observer.unobserve(link);
         }
       });
-    });
+    }, { threshold: 0.5 });
     observer.observe(link);
   });
 
@@ -112,4 +120,9 @@ function optimizePage() {
   // Remove overlays
   const overlays = document.querySelectorAll('.overlay, .modal, .popup'); // Adjust selectors as needed
   overlays.forEach(overlay => overlay.remove());
+
+  // Performance measurement end
+  const endTime = performance.now();
+  const loadTime = endTime - startTime;
+  console.log('Page load time:', loadTime);
 }
