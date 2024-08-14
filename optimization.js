@@ -13,7 +13,31 @@ function optimizePage() {
   //   /* ... other critical styles */
   // </style>
 
-  // 3. Image optimization
+  // 3. Resource loading
+  const preloadLinks = document.querySelectorAll('link[rel="preload"]');
+  preloadLinks.forEach(link => {
+    const clone = link.cloneNode();
+    clone.rel = 'prefetch';
+    document.head.appendChild(clone);
+  });
+
+  const scripts = document.querySelectorAll('script:not([defer])');
+  scripts.forEach(script => {
+    script.defer = true;
+  });
+
+  // 4. Debloating and Ad Removal
+  const unnecessaryElements = document.querySelectorAll(
+    '.ad, .sidebar, .footer, .social-media, .popup, .modal, .overlay, .promotion, .banner, iframe[src*="ads"], div[id^="ad"], script[src*="ads"]'
+  );
+  unnecessaryElements.forEach(element => {
+    // Remove placeholders associated with debloated elements if applicable
+    const placeholders = element.querySelectorAll('.placeholder');
+    placeholders.forEach(placeholder => placeholder.remove());
+    element.remove();
+  });
+
+  // 5. Image optimization
   const images = document.querySelectorAll('img');
   const imageFragment = document.createDocumentFragment();
 
@@ -54,30 +78,6 @@ function optimizePage() {
   }
 
   document.body.appendChild(imageFragment);
-
-  // 4. Resource loading
-  const preloadLinks = document.querySelectorAll('link[rel="preload"]');
-  preloadLinks.forEach(link => {
-    const clone = link.cloneNode();
-    clone.rel = 'prefetch';
-    document.head.appendChild(clone);
-  });
-
-  const scripts = document.querySelectorAll('script:not([defer])');
-  scripts.forEach(script => {
-    script.defer = true;
-  });
-
-  // 5. Debloating and Ad Removal
-  const unnecessaryElements = document.querySelectorAll(
-    '.ad, .sidebar, .footer, .social-media, .popup, .modal, .overlay, .promotion, .banner, iframe[src*="ads"], div[id^="ad"], script[src*="ads"]'
-  );
-  unnecessaryElements.forEach(element => {
-    // Remove placeholders associated with debloated elements if applicable
-    const placeholders = element.querySelectorAll('.placeholder');
-    placeholders.forEach(placeholder => placeholder.remove());
-    element.remove();
-  });
 
   // 6. Enhanced Image Optimization
   const images = document.querySelectorAll('img');
