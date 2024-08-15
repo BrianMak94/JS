@@ -1,125 +1,205 @@
 function optimizePage() {
-  // 1. Viewport meta tag
+  // 1. Add viewport meta tag
   const viewportMeta = document.createElement('meta');
   viewportMeta.name = 'viewport';
   viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
   document.head.appendChild(viewportMeta);
 
-  // 2. Prioritize critical CSS (inline or load early)
-  // Example:
-  // <style>
-  //   /* Critical CSS for initial layout */
-  //   body { margin: 0; font-family: sans-serif; }
-  //   /* ... other critical styles */
-  // </style>
+  // 2. Inline critical CSS
+  const criticalCSS = `
+    body { margin: 0; font-family: sans-serif; }
+    .skeleton {
+      background: #ddd;
+      border-radius: 4px;
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0% { background-color: #ddd; }
+      50% { background-color: #eee; }
+      100% { background-color: #ddd; }
+    }
+    .skeleton-text {
+      height: 16px;
+      margin: 8px 0;
+    }
+    .skeleton-image,
+    .skeleton-video,
+    .skeleton-audio {
+      background: #ddd;
+      border-radius: 4px;
+      width: 100%;
+    }
+  `;
+  const style = document.createElement('style');
+  style.textContent = criticalCSS;
+  document.head.appendChild(style);
 
-  // 3. Resource loading
-  const preloadLinks = document.querySelectorAll('link[rel="preload"]');
-  preloadLinks.forEach(link => {
+  // 3. Convert preload links to prefetch and defer non-deferred scripts
+  document.querySelectorAll('link[rel="preload"]').forEach(link => {
     const clone = link.cloneNode();
     clone.rel = 'prefetch';
     document.head.appendChild(clone);
   });
-
-  const scripts = document.querySelectorAll('script:not([defer])');
-  scripts.forEach(script => {
+  document.querySelectorAll('script:not([defer])').forEach(script => {
     script.defer = true;
   });
 
-  // 4. Debloating and Ad Removal
-  const unnecessaryElements = document.querySelectorAll(
+  // 4. Remove unnecessary elements
+  document.querySelectorAll(
     '.ad, .sidebar, .footer, .social-media, .popup, .modal, .overlay, .promotion, .banner, iframe[src*="ads"], div[id^="ad"], script[src*="ads"]'
-  );
-  unnecessaryElements.forEach(element => {
-    // Remove placeholders associated with debloated elements if applicable
-    const placeholders = element.querySelectorAll('.placeholder');
-    placeholders.forEach(placeholder => placeholder.remove());
+  ).forEach(element => {
+    element.querySelectorAll('.placeholder').forEach(placeholder => placeholder.remove());
     element.remove();
   });
 
-  // 5. Enhanced Image Optimization
-  const images = document.querySelectorAll('img');
-  const imageFragment = document.createDocumentFragment();
+  // 5. Show skeleton screens and optimize media with lazy loading
+  const observerOptions = { rootMargin: '0px', threshold: 0.1 };
 
-  for (let i = 0; i < images.length; i++) {
-    const img = images[i];
-    // Lazy loading with placeholders
-    if (img.dataset.src) {
-      const placeholder = document.createElement('img');
-      placeholder.classList.add('placeholder');
-      placeholder.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-      img.parentNode.replaceChild(placeholder, img);
+  const observer = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const element = entry.target;
+        
+        // Replace placeholders with actual images
+        if (element.tagName === 'IMG' && element.dataset.src) {
+          element.src = element.dataset.src;
+          element.removeAttribute('data-src');
+        }
 
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const img = entry.target.nextElementSibling;
-            img.src = img.dataset.src;
-            observer.unobserve(entry.target);
-            entry.target.remove();
+        // Replace placeholders with actual videos and audios
+        if ((element.tagName === 'VIDEO' || element.tagName === 'AUDIO') && element.dataset.src) {
+          element.src = element.dataset.src;
+          element.removeAttribute('data-src');
+        }
+
+        // Replace skeleton content with actual content
+        if (element.classList.contains('skeleton')) {
+          const actualContent = element.querySelector('.actual-content');
+          if (actualContent) {
+            element.innerHTML = ''; // Clear skeleton
+            element.appendChild(actualContent);
           }
-        });
-      });
-      observer.observe(placeholder);
+        }
+
+        observer.unobserve(element);
+      }
+    });
+  }, observerOptions);
+
+  // Create and apply skeleton placeholders
+  const createSkeleton = (element) => {
+    const skeleton = document.createElement('div');
+    skeleton.classList.add('skeleton');
+    
+    if (element.tagName === 'IMG') {
+      skeleton.classList.add('skeleton-image');
+      skeleton.style.height = element.height + 'px';
+    } else if (element.tagName === 'VIDEO') {
+      skeleton.classList.add('skeleton-video');
+      skeleton.style.height = element.height + 'px';
+    } else if (element.tagName === 'AUDIO') {
+      skeleton.classList.add('skeleton-audio');
+      skeleton.style.height = element.height + 'px';
     }
 
-    // Responsive images
-    const srcset = img.srcset || '';
-    const sizes = img.sizes || '';
-    if (!srcset || !sizes) {
-      const width = img.naturalWidth;
-      const src = img.src;
-      img.srcset = `${src} ${width}w`;
-      img.sizes = `(max-width: ${width}px) 100vw, ${width}px`;
+    return skeleton;
+  };
+
+  // Apply skeletons to images
+  document.querySelectorAll('img').forEach(img => {
+    if (img.dataset.src) {
+      const skeleton = createSkeleton(img);
+      img.parentNode.replaceChild(skeleton, img);
+
+      observer.observe(skeleton);
+
+      skeleton.onload = () => {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        skeleton.replaceWith(img);
+      };
+    } else {
+      img.loading = 'lazy'; // Lazy load images
     }
+  });
 
-    // Append to fragment for batch DOM updates
-    imageFragment.appendChild(img);
-  }
+  // Apply skeletons to videos and audios
+  document.querySelectorAll('video, audio').forEach(media => {
+    if (media.dataset.src) {
+      const skeleton = createSkeleton(media);
+      media.parentNode.replaceChild(skeleton, media);
 
-  document.body.appendChild(imageFragment);
+      observer.observe(skeleton);
 
-  // 6. JavaScript optimization
-  // (Minification, combining, and code optimization are typically handled by build tools)
+      skeleton.onload = () => {
+        media.src = media.dataset.src;
+        media.removeAttribute('data-src');
+        skeleton.replaceWith(media);
+      };
+    } else {
+      media.loading = 'lazy'; // Apply lazy loading where possible
+    }
+  });
 
   // Lazy load stylesheets
-  const lazyStylesheets = document.querySelectorAll('link[rel="stylesheet"][data-lazy]');
-  lazyStylesheets.forEach(link => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const link = entry.target;
-          const href = link.dataset.lazy;
-          const newLink = document.createElement('link');
-          newLink.rel = 'stylesheet';
-          newLink.href = href;
-          document.head.appendChild(newLink);
-          observer.unobserve(link);
-        }
-      });
-    });
+  document.querySelectorAll('link[rel="stylesheet"][data-lazy]').forEach(link => {
     observer.observe(link);
   });
 
-  // Disable autoplay videos
-  const videos = document.querySelectorAll('video');
-  videos.forEach(video => {
+  // 6. Disable autoplay for videos
+  document.querySelectorAll('video').forEach(video => {
     video.autoplay = false;
-    video.muted = true; // Optional: Mute videos for a better user experience
+    video.muted = true;
   });
 
-  // Aggressive lazy loading for images
-  const imagesToLoadLazily = document.querySelectorAll('img:not([data-src])');
-  imagesToLoadLazily.forEach(img => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.src; // Trigger image loading
-          observer.unobserve(img);
-        }
+  // 7. Preconnect and prefetch important domains (if needed)
+  const preconnectLinks = []; // Add domains to preconnect
+  preconnectLinks.forEach(href => {
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = href;
+    document.head.appendChild(link);
+  });
+
+  const prefetchLinks = []; // Add URLs to prefetch
+  prefetchLinks.forEach(href => {
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = href;
+    document.head.appendChild(link);
+  });
+
+  // 8. Use async for non-critical JavaScript
+  document.querySelectorAll('script[data-async]').forEach(script => {
+    script.async = true;
+  });
+
+  // 9. Implement service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').then(registration => {
+        console.log('Service Worker registered with scope:', registration.scope);
+      }).catch(error => {
+        console.log('Service Worker registration failed:', error);
       });
     });
-    observer.observe(img);
+  }
+
+  // 10. Optimize web fonts
+  document.querySelectorAll('link[rel="stylesheet"][data-font]').forEach(link => {
+    link.onload = () => {
+      const fontFace = document.createElement('style');
+      fontFace.textContent = `
+        @font-face {
+          font-family: '${link.dataset.font}';
+          src: url('${link.href}') format('woff2');
+          font-display: swap;
+        }
+      `;
+      document.head.appendChild(fontFace);
+    };
   });
 }
+
+// Call the function to apply optimizations
+optimizePage();
