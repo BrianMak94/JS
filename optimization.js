@@ -7,11 +7,11 @@ function optimizePage() {
 
   // 2. Preconnect to important origins
   const origins = [
-    'https://fonts.googleapis.com',   // Google Fonts
-    'https://fonts.gstatic.com',      // Google Fonts static assets
-    'https://cdnjs.cloudflare.com',   // CDN for common JS/CSS libraries
-    'https://www.cloudflare.com',     // Cloudflare CDN and security services
-    'https://s3.amazonaws.com'        // AWS S3 (common for asset hosting)
+    'https://fonts.googleapis.com',
+    'https://fonts.gstatic.com',
+    'https://cdnjs.cloudflare.com',
+    'https://www.cloudflare.com',
+    'https://s3.amazonaws.com'
   ];
   origins.forEach(origin => {
     const link = document.createElement('link');
@@ -43,6 +43,11 @@ function optimizePage() {
     .skeleton-text {
       height: 16px;
       margin: 8px 0;
+    }
+    @font-face {
+      font-family: 'YourFont';
+      src: url('path-to-font.woff2') format('woff2');
+      font-display: swap;
     }
   `;
   const style = document.createElement('style');
@@ -115,10 +120,17 @@ function optimizePage() {
 
   // 8. Remove ad containers, wrappers, and placeholders
   const adSelectors = [
-    '.ad', '.sidebar', '.footer', '.social-media', '.popup', '.modal', '.overlay',
-    '.promotion', '.banner', 'iframe[src*="ads"]', 'div[id^="ad"]', 'script[src*="ads"]',
-    'div.ad', 'div.banner', 'div.promotion', 'div.sidebar', 'div.popup', 
-    'div[class*="ad-slot"]', 'div[class*="ad-wrapper"]', 'div[class*="ad-container"]'
+    '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner',
+    '.sidebar', '.footer', '.social-media', '.popup', '.modal', '.overlay',
+    '.promotion', '.iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
+    'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
+    'div[class*="sidebar"]', 'div[class*="popup"]', 'div[class*="overlay"]',
+    'div[class*="sponsor"]', 'div[class*="advertisement"]',
+    'div[class*="promoted"]', 'div[class*="iframe-ad"]', 'div[class*="ad-slot"]',
+    'div[class*="ad-wrapper"]', 'div[class*="ad-container"]',
+    'iframe[src*="ads"]', 'iframe[src*="ad"]', 'iframe[src*="promo"]',
+    'iframe[src*="sponsor"]', 'script[src*="ad"]', 'script[src*="promo"]',
+    'script[src*="sponsor"]'
   ].join(', ');
 
   document.querySelectorAll(adSelectors).forEach(element => {
@@ -130,6 +142,23 @@ function optimizePage() {
   // 9. Force responsive design on mobile
   document.body.style.width = '100%';
   document.body.style.overflowX = 'hidden';
+
+  // 10. Defer non-essential scripts
+  document.querySelectorAll('script').forEach(script => {
+    if (!script.hasAttribute('async') && !script.hasAttribute('defer')) {
+      script.defer = true;
+    }
+  });
+
+  // 11. Use requestIdleCallback for background tasks
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      // Perform non-critical background tasks here
+    });
+  }
+
+  // 12. Enable text compression (handled server-side typically)
+  // Ensure the server is configured to use Gzip or Brotli for text-based resources.
 }
 
 optimizePage();
