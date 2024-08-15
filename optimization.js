@@ -78,18 +78,12 @@ function optimizePage() {
   });
 
   // 7. Prioritize prefetching based on common container patterns
-  const prefetchLimit = 5; // Limit the number of prefetch requests
+  const prefetchLimit = 10; // Limit the number of prefetch requests
   let prefetchCount = 0;
 
-  // Define container selectors with assumed priority
   const containerSelectors = [
-    '.main-content',  // Main content areas
-    '.article',       // Articles or blog posts
-    '.header',        // Headers or navigation bars
-    '.sidebar',       // Sidebars (lower priority)
-    '.footer',        // Footers (lowest priority)
-    'header',         // Generic headers
-    'footer'          // Generic footers
+    '.main-content', '.article', '.header', '.sidebar', '.footer',
+    'header', 'footer'
   ];
 
   const linkObserver = new IntersectionObserver(entries => {
@@ -99,8 +93,7 @@ function optimizePage() {
         if (link.tagName === 'A' && link.href) {
           const container = link.closest(containerSelectors.join(', '));
           const priority = containerSelectors.indexOf(container ? container.classList[0] : '') + 1;
-          
-          // If priority level is valid and within limit
+
           if (priority && prefetchCount < prefetchLimit) {
             const prefetchLink = document.createElement('link');
             prefetchLink.rel = 'prefetch';
