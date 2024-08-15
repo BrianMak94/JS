@@ -1,5 +1,13 @@
-// Hide all images on the page
-const images = document.getElementsByTagName('img');
-for (let i = 0; i < images.length; i++) {
-    images[i].style.setProperty('display', 'none', 'important');
+// Function to block all images
+function blockAllImages() {
+    // Get all image elements
+    const images = document.querySelectorAll('img');
+    
+    // Hide each image
+    images.forEach(image => {
+        image.style.display = 'none';
+    });
 }
+
+// Run the function to block images
+blockAllImages();
