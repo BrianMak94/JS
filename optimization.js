@@ -122,13 +122,5 @@
     }
   }
 
-  // Run optimizePage as early as possible
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', optimizePage);
-  } else {
-    requestAnimationFrame(optimizePage);
-  }
-
-  // Fallback to ensure it runs if injected late
-  window.addEventListener('load', optimizePage);
+  optimizePage();
 })();
