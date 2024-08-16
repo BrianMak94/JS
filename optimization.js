@@ -1,79 +1,48 @@
 function optimizePage() {
   try {
-    // 1. Define Priority Levels and Containers
-    const priorityLevels = { high: 1, medium: 2, low: 3 };
-    const containerPriorities = {
-      '.main-content': 1, '.article': 1, 'header': 1, '.container': 2, 
-      'nav': 2, '.sidebar': 3, '.footer': 3, '.content': 2, '.primary': 1, 
-      '.main': 1, '.hero': 1, '.top': 2, '.secondary': 3, '.widget': 3
-    };
+    // 1. Viewport meta tag
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
+    viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+    document.head.appendChild(viewportMeta);
 
-    // 2. Preconnect to Important Origins
+    // 2. Preconnect to origins
     const origins = [
-      'https://fonts.googleapis.com', 'https://fonts.gstatic.com', 
-      'https://cdnjs.cloudflare.com', 'https://www.cloudflare.com', 
-      'https://s3.amazonaws.com'
+      'https://fonts.googleapis.com', 'https://fonts.gstatic.com',
+      'https://cdnjs.cloudflare.com', 'https://www.cloudflare.com', 'https://s3.amazonaws.com'
     ];
-    origins.forEach(origin => {
-      const link = document.createElement('link');
-      link.rel = 'preconnect';
-      link.href = origin;
-      link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
+    origins.forEach(o => {
+      const l = document.createElement('link');
+      l.rel = 'preconnect';
+      l.href = o;
+      l.crossOrigin = 'anonymous';
+      document.head.appendChild(l);
     });
 
-    // 3. Inline Critical CSS
-    const criticalCSS = `
+    // 3. Inline critical CSS
+    const css = `
       body { margin: 0; font-family: sans-serif; max-width: 100%; overflow-x: hidden; }
       img, video, iframe { max-width: 100%; height: auto; }
-      .skeleton { background: #ddd; border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; }
-      @keyframes pulse { 0% { background-color: #ddd; } 50% { background-color: #eee; } 100% { background-color: #ddd; } }
+      .skeleton { background: #ddd; border-radius: 4px; animation: pulse 1.5s infinite; }
+      @keyframes pulse { 0%, 100% { background: #ddd; } 50% { background: #eee; } }
       .skeleton-image, .skeleton-video, .skeleton-audio { background: #ddd; border-radius: 4px; width: 100%; }
       .skeleton-text { height: 16px; margin: 8px 0; }
     `;
     const style = document.createElement('style');
-    style.textContent = criticalCSS;
+    style.textContent = css;
     document.head.appendChild(style);
 
-    // 4. Remove Ad Containers and Placeholders
-    const adSelectors = [
-      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner', 
-      '.sidebar', '.footer', '.popup', '.modal', '.overlay', '.notification',
-      '.chat', '.live-chat', '.subscription', '.newsletter', '.promotion',
-      '.iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
-      'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
-      'div[class*="popup"]', 'div[class*="overlay"]', 'div[class*="chat"]',
-      'div[class*="live-chat"]', 'div[class*="notification"]', 
-      'div[class*="subscription"]', 'div[class*="newsletter"]'
-    ].join(', ');
+    // 4. Priority levels
+    const pLevels = { high: 1, medium: 2, low: 3 };
 
-    document.querySelectorAll(adSelectors).forEach(el => {
-      const placeholders = el.querySelectorAll('.placeholder');
-      placeholders.forEach(ph => ph.remove());
-      el.remove();
-    });
-
-    // 5. Force Responsive Design on Mobile
-    document.body.style.width = '100%';
-    document.body.style.overflowX = 'hidden';
-
-    // 6. Defer Non-Essential Scripts
-    document.querySelectorAll('script').forEach(script => {
-      if (!script.hasAttribute('async') && !script.hasAttribute('defer')) {
-        script.defer = true;
-      }
-    });
-
-    // 7. Setup IntersectionObserver for Priority-Based Lazy Loading
-    const observerOptions = { rootMargin: '0px', threshold: 0.1 };
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const el = entry.target;
-          const priority = el.dataset.priority || 'low';
-          const priorityLevel = priorityLevels[priority] || priorityLevels.low;
-
-          if (priorityLevel <= priorityLevels.medium) {
+    // 5. IntersectionObserver
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const el = e.target;
+          const p = el.dataset.priority || 'low';
+          const pl = pLevels[p] || pLevels.low;
+          if (pl <= pLevels.medium) {
             if (el.tagName === 'IMG' && el.dataset.src) {
               el.src = el.dataset.src;
               el.removeAttribute('data-src');
@@ -83,62 +52,98 @@ function optimizePage() {
               el.removeAttribute('data-src');
             }
             if (el.tagName === 'LINK' && el.dataset.lazy) {
-              const newLink = document.createElement('link');
-              newLink.rel = 'stylesheet';
-              newLink.href = el.dataset.lazy;
-              document.head.appendChild(newLink);
+              const l = document.createElement('link');
+              l.rel = 'stylesheet';
+              l.href = el.dataset.lazy;
+              document.head.appendChild(l);
               el.remove();
             }
-            observer.unobserve(el);
-          }
-        }
-      });
-    }, observerOptions);
-
-    // 8. Prefetch High-Priority Links in View
-    const prefetchLimit = 10;
-    let prefetchCount = 0;
-    const linkObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && prefetchCount < prefetchLimit) {
-          const link = entry.target;
-          if (link.tagName === 'A' && link.href) {
-            const container = link.closest(Object.keys(containerPriorities).join(', '));
-            if (container) {
-              const priority = containerPriorities['.' + container.classList[0]] || 3;
-              if (priority <= 2) {
-                const prefetchLink = document.createElement('link');
-                prefetchLink.rel = 'prefetch';
-                prefetchLink.href = link.href;
-                document.head.appendChild(prefetchLink);
-                prefetchCount++;
-              }
-            }
-            linkObserver.unobserve(link);
+            obs.unobserve(el);
           }
         }
       });
     }, { rootMargin: '0px', threshold: 0.1 });
 
-    document.querySelectorAll('a').forEach(link => {
-      linkObserver.observe(link);
+    // 6. Lazy load elements
+    document.querySelectorAll('img[data-src], video[data-src], audio[data-src]').forEach(m => {
+      const c = m.closest('.main-content, .article, header, footer');
+      m.dataset.priority = c ? (c.classList.contains('main-content') ? 'high' : 'medium') : 'low';
+      const s = document.createElement('div');
+      s.classList.add('skeleton', m.tagName.toLowerCase() === 'video' ? 'skeleton-video' : 'skeleton-audio');
+      s.style.height = m.height + 'px';
+      m.parentNode.replaceChild(s, m);
+      obs.observe(s);
     });
 
-    // 9. Use requestIdleCallback for Non-Critical Tasks
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
-        // Perform non-essential background tasks here
-      });
-    }
+    document.querySelectorAll('link[rel="stylesheet"][data-lazy]').forEach(l => {
+      const c = l.closest('.main-content, .article, header, footer');
+      l.dataset.priority = c ? (c.classList.contains('main-content') ? 'high' : 'medium') : 'low';
+      const s = document.createElement('div');
+      s.classList.add('skeleton');
+      document.head.appendChild(s);
+      obs.observe(l);
+    });
 
-    // 10. Viewport Meta Tag for Responsiveness (Re-added for completeness)
-    const viewportMeta = document.createElement('meta');
-    viewportMeta.name = 'viewport';
-    viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-    document.head.appendChild(viewportMeta);
-    
-  } catch (error) {
-    console.error('Error optimizing page:', error);
+    // 7. Prefetch links
+    const prefetchLimit = 10;
+    let prefetchCount = 0;
+    const pContainers = ['.main-content', '.article', 'header', 'footer'];
+
+    const linkObs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting && prefetchCount < prefetchLimit) {
+          const l = e.target;
+          if (l.tagName === 'A' && l.href) {
+            const c = l.closest(pContainers.join(', '));
+            if (c && prefetchCount < prefetchLimit) {
+              const pl = document.createElement('link');
+              pl.rel = 'prefetch';
+              pl.href = l.href;
+              document.head.appendChild(pl);
+              prefetchCount++;
+            }
+          }
+          linkObs.unobserve(l);
+        }
+      });
+    }, { rootMargin: '0px', threshold: 0.1 });
+
+    document.querySelectorAll('a').forEach(l => linkObs.observe(l));
+
+    // 8. Remove ad containers
+    const adSel = [
+      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner', '.sidebar',
+      '.footer', '.social-media', '.popup', '.modal', '.overlay', '.promotion',
+      '.iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
+      'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
+      'div[class*="sidebar"]', 'div[class*="popup"]', 'div[class*="overlay"]',
+      'div[class*="sponsor"]', 'div[class*="advertisement"]', 'div[class*="promoted"]',
+      'div[class*="iframe-ad"]', 'div[class*="ad-slot"]', 'div[class*="ad-wrapper"]',
+      'div[class*="ad-container"]'
+    ].join(', ');
+
+    document.querySelectorAll(adSel).forEach(el => {
+      el.querySelectorAll('.placeholder').forEach(ph => ph.remove());
+      el.remove();
+    });
+
+    // 9. Force responsive design
+    document.body.style.width = '100%';
+    document.body.style.overflowX = 'hidden';
+
+    // 10. Defer non-essential scripts
+    document.querySelectorAll('script').forEach(s => {
+      if (!s.hasAttribute('async') && !s.hasAttribute('defer')) {
+        s.defer = true;
+      }
+    });
+
+    // 11. Use requestIdleCallback
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => { /* Non-essential tasks */ });
+    }
+  } catch (e) {
+    console.error('Error optimizing page:', e);
   }
 }
 
