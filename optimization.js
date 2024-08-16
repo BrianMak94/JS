@@ -85,11 +85,6 @@ function optimizePage() {
     document.querySelectorAll('a').forEach(l => linkObserver.observe(l));
 
     // Remove ads
-    const adSelectors = [
-      '.ad', '.ads', '.advertisement', 
-      'iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
-      'div[class*="ad"]'
-    ].join(', ');
 
     document.querySelectorAll(adSelectors).forEach(e => {
       e.querySelectorAll('.placeholder').forEach(ph => ph.remove());
