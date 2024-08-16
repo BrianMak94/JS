@@ -1,4 +1,4 @@
-console.log('JS loaded, hehe');
+console.log('JS loaded');
 (function() {
   function optimizePage() {
     try {
