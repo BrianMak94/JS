@@ -1,127 +1,156 @@
-console.log('JS loaded');
 (function() {
   function optimizePage() {
     try {
-      // 1. Viewport meta tag for responsiveness
-      const viewportMeta = document.createElement('meta');
-      viewportMeta.name = 'viewport';
-      viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-      document.head.appendChild(viewportMeta);
+      // Utility function for logging actions
+      function logAction(action, element) {
+        console.log(`${action}: ${element ? element.className || element.src || element.href : ''}`);
+      }
 
-      // 2. Skeleton loader styles
-      const skeletonCSS = `
-        .skeleton {
-          background: #888;
-          border-radius: 4px;
-          animation: pulse 1.5s infinite ease-in-out;
+      // Remove problematic iframes
+      document.querySelectorAll('iframe').forEach(iframe => {
+        if (/ads|track|analytics/.test(iframe.src || '')) {
+          logAction('Removing problematic iframe', iframe);
+          iframe.remove();
         }
-        @keyframes pulse {
-          0% { opacity: 0.4; }
-          50% { opacity: 0.6; }
-          100% { opacity: 0.4; }
-        }
-        .skeleton-image, .skeleton-video, .skeleton-audio {
-          width: 100%;
-          height: auto;
-        }
-        .skeleton-text {
-          height: 16px;
-          margin: 8px 0;
-        }
+      });
+
+      // Viewport meta tag for responsiveness
+      const viewportMeta = document.querySelector('meta[name="viewport"]');
+      if (!viewportMeta) {
+        logAction('Adding viewport meta tag');
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+        document.head.appendChild(meta);
+      } else {
+        logAction('Viewport meta tag already present');
+      }
+
+      // Disable video autoplay
+      document.querySelectorAll('video[autoplay]').forEach(video => {
+        logAction('Disabling video autoplay', video);
+        video.removeAttribute('autoplay');
+      });
+
+      // Critical CSS for lazy loading skeleton
+      const criticalCSS = `
+        .skeleton { background: #888; border-radius: 4px; opacity: 0.8; }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.15; } 100% { opacity: 0.3; } }
+        .skeleton { animation: pulse 1.5s infinite ease-in-out; }
       `;
       const style = document.createElement('style');
-      style.textContent = skeletonCSS;
+      style.textContent = criticalCSS;
       document.head.appendChild(style);
+      logAction('Adding critical CSS for lazy loading skeleton');
 
-      // 3. IntersectionObserver for lazy loading with skeletons
-      const observer = new IntersectionObserver(entries => {
+      // Defer non-essential scripts
+      document.querySelectorAll('script:not([async]):not([defer])').forEach(script => {
+        if (!script.src.includes('critical')) {
+          logAction('Deferring script', script);
+          script.defer = true;
+        }
+      });
+
+      // Setup lazy loading
+      const classPriority = ['header', 'main'];
+      const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const el = entry.target;
-            if (el.tagName === 'IMG' && el.dataset.src) {
-              el.src = el.dataset.src;
-              el.removeAttribute('data-src');
-              el.classList.remove('skeleton-image'); // Remove skeleton class
+            if (classPriority.some(cls => el.classList.contains(cls))) {
+              logAction('Lazy loading element', el);
+              if (el.dataset.src) {
+                el.src = el.dataset.src;
+                el.classList.remove('skeleton');
+                el.removeAttribute('data-src');
+              }
+              observer.unobserve(el);
             }
-            if ((el.tagName === 'VIDEO' || el.tagName === 'AUDIO') && el.dataset.src) {
-              el.src = el.dataset.src;
-              el.removeAttribute('data-src');
-              el.classList.remove('skeleton-video'); // Remove skeleton class
-            }
-            observer.unobserve(el);
           }
         });
       });
 
-      // Apply skeletons and observe elements
-      const priorityClasses = ['header', 'main', 'article', 'section', 'aside', 'footer'];
-      const elements = document.querySelectorAll('img[data-src], video[data-src], audio[data-src]');
-      elements.forEach(el => {
-        const elClass = el.closest(priorityClasses.join(','))?.classList[0];
-        if (priorityClasses.indexOf(elClass) !== -1) {
-          if (el.tagName === 'IMG') {
-            el.classList.add('skeleton-image');
-          } else if (el.tagName === 'VIDEO' || el.tagName === 'AUDIO') {
-            el.classList.add('skeleton-video');
-          }
-          observer.observe(el);
-        }
+      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+        media.classList.add('skeleton');
+        logAction('Adding skeleton and observing media for lazy loading', media);
+        lazyLoadObserver.observe(media);
       });
 
-      // 4. Prefetch high-priority links based on container priority
-      const prefetchLimit = 5;
-      let prefetchCount = 0;
-      const prefetchObserver = new IntersectionObserver(entries => {
+      // Setup prefetching with blacklist
+      const prefetchBlacklistSelectors = [
+        '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*', 
+        '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*', 
+        '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*', 
+        '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]', 
+        '.hidden*', '.offscreen*'
+      ].join(', ');
+
+      const prefetchObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
-          if (entry.isIntersecting && prefetchCount < prefetchLimit) {
+          if (entry.isIntersecting) {
             const link = entry.target;
-            const elClass = link.closest(priorityClasses.join(','))?.classList[0];
-            if (priorityClasses.indexOf(elClass) !== -1) {
+            if (!link.matches(prefetchBlacklistSelectors)) {
+              logAction('Prefetching link', link);
               const prefetchLink = document.createElement('link');
               prefetchLink.rel = 'prefetch';
               prefetchLink.href = link.href;
               document.head.appendChild(prefetchLink);
-              prefetchCount++;
+              observer.unobserve(link);
             }
-            prefetchObserver.unobserve(link);
           }
         });
       });
 
       document.querySelectorAll('a').forEach(link => {
+        logAction('Observing link for prefetching', link);
         prefetchObserver.observe(link);
       });
 
-      // 5. Remove clearly ad-related elements
+      // Remove ads and overlays
       const adSelectors = [
-        '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner'
+        '[class^="ad-"]', '[class*=" ad-"]', '[class$="-ad"]', '[class*="ads"]',
+        '[class*="-ads"]', '[class*="ads-"]'
       ].join(', ');
-
+      
       document.querySelectorAll(adSelectors).forEach(el => {
+        logAction('Removing ad element', el);
         el.remove();
       });
 
-      // 6. Force responsive design
-      //document.body.style.width = '100%';
-      //document.body.style.overflowX = 'hidden';
+      const overlaySelectors = [
+        '.paywall', '.subscription', '.signup', '.modal', '.popup', '.overlay',
+        '.cookie-consent', '.cookie-banner', '.notification', '.banner', '.announce'
+      ].join(', ');
 
-      // 7. Defer non-essential scripts
-      document.querySelectorAll('script').forEach(script => {
-        if (!script.hasAttribute('async') && !script.hasAttribute('defer')) {
-          script.defer = true;
-        }
+      document.querySelectorAll(overlaySelectors).forEach(el => {
+        logAction('Removing overlay element', el);
+        el.remove();
       });
 
-      // 8. Use requestIdleCallback for non-critical tasks
+      // Use requestIdleCallback for non-critical background tasks
       if ('requestIdleCallback' in window) {
+        logAction('Using requestIdleCallback for non-critical tasks');
         requestIdleCallback(() => {
-          // Perform non-essential background tasks here
+          // Additional non-essential tasks can be performed here
         });
+      } else {
+        logAction('requestIdleCallback is not supported');
       }
     } catch (error) {
       console.error('Error optimizing page:', error);
     }
   }
 
-  optimizePage();
+  // Ensure optimizePage runs as early as possible
+  if (document.readyState === 'loading') {
+    console.log('Document is loading, adding DOMContentLoaded event listener.');
+    document.addEventListener('DOMContentLoaded', optimizePage);
+  } else {
+    console.log('Document is already loaded, running optimizePage.');
+    requestAnimationFrame(optimizePage);
+  }
+
+  // Fallback to ensure optimizePage runs if injected late
+  console.log('Adding load event listener for fallback.');
+  window.addEventListener('load', optimizePage);
 })();
