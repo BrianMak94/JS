@@ -1,17 +1,17 @@
 function optimizePage() {
   try {
-    // 1. Viewport meta tag for responsiveness
-    const viewportMeta = document.createElement('meta');
-    viewportMeta.name = 'viewport';
-    viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-    document.head.appendChild(viewportMeta);
+    // 1. Define Priority Levels and Containers
+    const priorityLevels = { high: 1, medium: 2, low: 3 };
+    const containerPriorities = {
+      '.main-content': 1, '.article': 1, 'header': 1, '.container': 2, 
+      'nav': 2, '.sidebar': 3, '.footer': 3, '.content': 2, '.primary': 1, 
+      '.main': 1, '.hero': 1, '.top': 2, '.secondary': 3, '.widget': 3
+    };
 
-    // 2. Preconnect to important origins
+    // 2. Preconnect to Important Origins
     const origins = [
-      'https://fonts.googleapis.com',
-      'https://fonts.gstatic.com',
-      'https://cdnjs.cloudflare.com',
-      'https://www.cloudflare.com',
+      'https://fonts.googleapis.com', 'https://fonts.gstatic.com', 
+      'https://cdnjs.cloudflare.com', 'https://www.cloudflare.com', 
       'https://s3.amazonaws.com'
     ];
     origins.forEach(origin => {
@@ -22,7 +22,7 @@ function optimizePage() {
       document.head.appendChild(link);
     });
 
-    // 3. Inline critical CSS
+    // 3. Inline Critical CSS
     const criticalCSS = `
       body { margin: 0; font-family: sans-serif; max-width: 100%; overflow-x: hidden; }
       img, video, iframe { max-width: 100%; height: auto; }
@@ -35,10 +35,36 @@ function optimizePage() {
     style.textContent = criticalCSS;
     document.head.appendChild(style);
 
-    // 4. Define priority levels
-    const priorityLevels = { high: 1, medium: 2, low: 3 };
+    // 4. Remove Ad Containers and Placeholders
+    const adSelectors = [
+      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner', 
+      '.sidebar', '.footer', '.popup', '.modal', '.overlay', '.notification',
+      '.chat', '.live-chat', '.subscription', '.newsletter', '.promotion',
+      '.iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
+      'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
+      'div[class*="popup"]', 'div[class*="overlay"]', 'div[class*="chat"]',
+      'div[class*="live-chat"]', 'div[class*="notification"]', 
+      'div[class*="subscription"]', 'div[class*="newsletter"]'
+    ].join(', ');
 
-    // 5. IntersectionObserver for priority-based lazy loading
+    document.querySelectorAll(adSelectors).forEach(el => {
+      const placeholders = el.querySelectorAll('.placeholder');
+      placeholders.forEach(ph => ph.remove());
+      el.remove();
+    });
+
+    // 5. Force Responsive Design on Mobile
+    document.body.style.width = '100%';
+    document.body.style.overflowX = 'hidden';
+
+    // 6. Defer Non-Essential Scripts
+    document.querySelectorAll('script').forEach(script => {
+      if (!script.hasAttribute('async') && !script.hasAttribute('defer')) {
+        script.defer = true;
+      }
+    });
+
+    // 7. Setup IntersectionObserver for Priority-Based Lazy Loading
     const observerOptions = { rootMargin: '0px', threshold: 0.1 };
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
@@ -69,50 +95,27 @@ function optimizePage() {
       });
     }, observerOptions);
 
-    // 6. Lazy load images, media, and stylesheets based on priority
-    document.querySelectorAll('img[data-src], video[data-src], audio[data-src]').forEach(media => {
-      const container = media.closest('.main-content, .article, header, footer');
-      const priority = container ? (container.classList.contains('main-content') ? 'high' : 'medium') : 'low';
-      media.dataset.priority = priority;
-      const skeleton = document.createElement('div');
-      skeleton.classList.add('skeleton', media.tagName.toLowerCase() === 'video' ? 'skeleton-video' : 'skeleton-audio');
-      skeleton.style.height = media.height + 'px';
-      media.parentNode.replaceChild(skeleton, media);
-      observer.observe(skeleton);
-    });
-
-    document.querySelectorAll('link[rel="stylesheet"][data-lazy]').forEach(link => {
-      const container = link.closest('.main-content, .article, header, footer');
-      const priority = container ? (container.classList.contains('main-content') ? 'high' : 'medium') : 'low';
-      link.dataset.priority = priority;
-      const skeleton = document.createElement('div');
-      skeleton.classList.add('skeleton');
-      document.head.appendChild(skeleton);
-      observer.observe(link);
-    });
-
-    // 7. Prefetch high-priority links in view
+    // 8. Prefetch High-Priority Links in View
     const prefetchLimit = 10;
     let prefetchCount = 0;
-    const priorityContainers = ['.main-content', '.article', 'header', 'footer'];
-
     const linkObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting && prefetchCount < prefetchLimit) {
           const link = entry.target;
           if (link.tagName === 'A' && link.href) {
-            const container = link.closest(priorityContainers.join(', '));
-            const priority = priorityContainers.indexOf(container ? container.classList[0] : '') + 1;
-
-            if (priority && prefetchCount < prefetchLimit) {
-              const prefetchLink = document.createElement('link');
-              prefetchLink.rel = 'prefetch';
-              prefetchLink.href = link.href;
-              document.head.appendChild(prefetchLink);
-              prefetchCount++;
+            const container = link.closest(Object.keys(containerPriorities).join(', '));
+            if (container) {
+              const priority = containerPriorities['.' + container.classList[0]] || 3;
+              if (priority <= 2) {
+                const prefetchLink = document.createElement('link');
+                prefetchLink.rel = 'prefetch';
+                prefetchLink.href = link.href;
+                document.head.appendChild(prefetchLink);
+                prefetchCount++;
+              }
             }
+            linkObserver.unobserve(link);
           }
-          linkObserver.unobserve(link);
         }
       });
     }, { rootMargin: '0px', threshold: 0.1 });
@@ -121,41 +124,19 @@ function optimizePage() {
       linkObserver.observe(link);
     });
 
-    // 8. Remove ad containers and placeholders
-    const adSelectors = [
-      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner', 
-      '.sidebar', '.footer', '.social-media', '.popup', '.modal', '.overlay',
-      '.promotion', '.iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
-      'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
-      'div[class*="sidebar"]', 'div[class*="popup"]', 'div[class*="overlay"]',
-      'div[class*="sponsor"]', 'div[class*="advertisement"]',
-      'div[class*="promoted"]', 'div[class*="iframe-ad"]', 'div[class*="ad-slot"]',
-      'div[class*="ad-wrapper"]', 'div[class*="ad-container"]'
-    ].join(', ');
-
-    document.querySelectorAll(adSelectors).forEach(el => {
-      const placeholders = el.querySelectorAll('.placeholder');
-      placeholders.forEach(ph => ph.remove());
-      el.remove();
-    });
-
-    // 9. Force responsive design on mobile
-    document.body.style.width = '100%';
-    document.body.style.overflowX = 'hidden';
-
-    // 10. Defer non-essential scripts
-    document.querySelectorAll('script').forEach(script => {
-      if (!script.hasAttribute('async') && !script.hasAttribute('defer')) {
-        script.defer = true;
-      }
-    });
-
-    // 11. Use requestIdleCallback for non-critical tasks
+    // 9. Use requestIdleCallback for Non-Critical Tasks
     if ('requestIdleCallback' in window) {
       requestIdleCallback(() => {
         // Perform non-essential background tasks here
       });
     }
+
+    // 10. Viewport Meta Tag for Responsiveness (Re-added for completeness)
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
+    viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+    document.head.appendChild(viewportMeta);
+    
   } catch (error) {
     console.error('Error optimizing page:', error);
   }
