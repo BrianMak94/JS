@@ -93,7 +93,7 @@
 
       // 5. Remove clearly ad-related elements
       const adSelectors = [
-        '.ad', '.ads', '.advertisement', '.sponsor', '.promoted'
+        '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner'
       ].join(', ');
 
       document.querySelectorAll(adSelectors).forEach(el => {
@@ -101,8 +101,8 @@
       });
 
       // 6. Force responsive design
-      document.body.style.width = '100%';
-      document.body.style.overflowX = 'hidden';
+      //document.body.style.width = '100%';
+      //document.body.style.overflowX = 'hidden';
 
       // 7. Defer non-essential scripts
       document.querySelectorAll('script').forEach(script => {
