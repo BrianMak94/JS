@@ -104,7 +104,7 @@ function optimizePage() {
       }
     });
 
-    // 7. Prefetch high-priority links in view
+    // 7. Prefetch high and mid-priority links in view
     const prefetchLimit = 5; // Limit to 5 prefetched links at a time
     let prefetchCount = 0;
     const priorityContainers = ['.main-content', '.header', '.footer', '.article', 'header', 'footer'];
@@ -138,7 +138,7 @@ function optimizePage() {
 
     // 8. Remove ad containers and placeholders
     const adSelectors = [
-      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner', 
+      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner',
       '.sidebar', '.social-media', '.popup', '.modal', '.overlay',
       '.promotion', '.iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
       'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
