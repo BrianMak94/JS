@@ -135,4 +135,4 @@
 
   // Fallback to ensure it runs if injected late
   window.addEventListener('load', optimizePage);
-})();
+})(); true;
