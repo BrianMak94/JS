@@ -2,10 +2,10 @@
   function optimizePage() {
     try {
       // 1. Viewport meta tag for responsiveness
-      //const viewportMeta = document.createElement('meta');
-      //viewportMeta.name = 'viewport';
-      //viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-      //document.head.appendChild(viewportMeta);
+      const viewportMeta = document.createElement('meta');
+      viewportMeta.name = 'viewport';
+      viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+      document.head.appendChild(viewportMeta);
 
       // 2. Skeleton loader styles
       const skeletonCSS = `
