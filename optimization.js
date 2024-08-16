@@ -1,4 +1,5 @@
 (function() {
+  console.log('JS loaded');
   function optimizePage() {
     try {
       // 1. Viewport meta tag for responsiveness
