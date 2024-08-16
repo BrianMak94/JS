@@ -1,12 +1,12 @@
 function optimizePage() {
   try {
-    // 1. Viewport meta tag for responsiveness
+    // Step 1: Viewport meta tag for responsiveness
     const viewportMeta = document.createElement('meta');
     viewportMeta.name = 'viewport';
     viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
     document.head.appendChild(viewportMeta);
 
-    // 2. Preconnect to important origins
+    // Step 2: Preconnect to important origins
     const origins = [
       'https://fonts.googleapis.com',
       'https://fonts.gstatic.com',
@@ -22,80 +22,66 @@ function optimizePage() {
       document.head.appendChild(link);
     });
 
-    // 3. Inline critical CSS
+    // Step 3: Inline critical CSS
     const criticalCSS = `
       body { margin: 0; font-family: sans-serif; max-width: 100%; overflow-x: hidden; }
       img, video, iframe { max-width: 100%; height: auto; }
-      .skeleton { background: #ddd; border-radius: 4px; animation: pulse 1.5s infinite; }
-      @keyframes pulse { 0%, 100% { background-color: #ddd; } 50% { background-color: #eee; } }
+      .skeleton { background: #ddd; border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; }
+      @keyframes pulse { 0% { background-color: #ddd; } 50% { background-color: #eee; } 100% { background-color: #ddd; } }
     `;
     const style = document.createElement('style');
     style.textContent = criticalCSS;
     document.head.appendChild(style);
 
-    // 4. Define priority levels
-    const priorityLevels = { high: 1, medium: 2, low: 3 };
-
-    // 5. IntersectionObserver for priority-based lazy loading
-    const observerOptions = { rootMargin: '0px', threshold: 0.1 };
-    const observer = new IntersectionObserver(entries => {
+    // Step 4: Lazy load based on priority
+    const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const el = entry.target;
-          const priority = el.dataset.priority || 'low';
-          const priorityLevel = priorityLevels[priority] || priorityLevels.low;
-          if (priorityLevel <= priorityLevels.medium) {
-            if (el.tagName === 'IMG' && el.dataset.src) {
-              el.src = el.dataset.src;
-              el.removeAttribute('data-src');
-            }
-            if ((el.tagName === 'VIDEO' || el.tagName === 'AUDIO') && el.dataset.src) {
-              el.src = el.dataset.src;
-              el.removeAttribute('data-src');
-            }
-            if (el.tagName === 'LINK' && el.dataset.lazy) {
-              const newLink = document.createElement('link');
-              newLink.rel = 'stylesheet';
-              newLink.href = el.dataset.lazy;
-              document.head.appendChild(newLink);
-              el.remove();
-            }
-            observer.unobserve(el);
+          if (el.tagName === 'IMG' && el.dataset.src) {
+            el.src = el.dataset.src;
+            el.removeAttribute('data-src');
+          } else if (el.tagName === 'LINK' && el.dataset.lazy) {
+            const newLink = document.createElement('link');
+            newLink.rel = 'stylesheet';
+            newLink.href = el.dataset.lazy;
+            document.head.appendChild(newLink);
+            el.remove();
           }
+          observer.unobserve(el);
         }
       });
-    }, observerOptions);
+    }, { rootMargin: '0px', threshold: 0.1 });
 
-    // 6. Lazy load images, media, and stylesheets
-    document.querySelectorAll('img[data-src], video[data-src], audio[data-src]').forEach(media => {
-      const skeleton = document.createElement('div');
-      skeleton.classList.add('skeleton', media.tagName.toLowerCase() === 'video' ? 'skeleton-video' : 'skeleton-audio');
-      skeleton.style.height = media.height + 'px';
-      media.parentNode.replaceChild(skeleton, media);
-      media.dataset.priority = media.dataset.priority || 'low';
-      observer.observe(skeleton);
+    const priorityClasses = {
+      high: ['main', 'content', 'article'],
+      medium: ['header', 'nav', 'sidebar'],
+      low: ['footer', 'related', 'ads']
+    };
+
+    document.querySelectorAll('img[data-src], link[rel="stylesheet"][data-lazy]').forEach(el => {
+      const className = el.classList.value;
+      let priority = 'low';
+      for (let key in priorityClasses) {
+        if (priorityClasses[key].some(cls => className.includes(cls))) {
+          priority = key;
+          break;
+        }
+      }
+      el.dataset.priority = priority;
+      observer.observe(el);
     });
 
-    document.querySelectorAll('link[rel="stylesheet"][data-lazy]').forEach(link => {
-      const skeleton = document.createElement('div');
-      skeleton.classList.add('skeleton');
-      document.head.appendChild(skeleton);
-      link.dataset.priority = link.dataset.priority || 'low';
-      observer.observe(link);
-    });
-
-    // 7. Prefetch high-priority links in view
-    const prefetchLimit = 10;
+    // Step 5: Prefetch links based on priority
+    const prefetchLimit = 5;
     let prefetchCount = 0;
-    const priorityContainers = ['.main-content', 'header', '.article', 'footer'];
-
-    const linkObserver = new IntersectionObserver(entries => {
+    const prefetchObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting && prefetchCount < prefetchLimit) {
           const link = entry.target;
           if (link.tagName === 'A' && link.href) {
-            const container = link.closest(priorityContainers.join(', '));
-            if (container) {
+            const priority = link.closest('main, header, footer, nav') ? 'high' : 'medium';
+            if (priority === 'high' || prefetchCount < prefetchLimit) {
               const prefetchLink = document.createElement('link');
               prefetchLink.rel = 'prefetch';
               prefetchLink.href = link.href;
@@ -103,42 +89,33 @@ function optimizePage() {
               prefetchCount++;
             }
           }
-          linkObserver.unobserve(link);
+          prefetchObserver.unobserve(link);
         }
       });
     }, { rootMargin: '0px', threshold: 0.1 });
 
     document.querySelectorAll('a').forEach(link => {
-      linkObserver.observe(link);
+      prefetchObserver.observe(link);
     });
 
-    // 8. Remove ad containers and placeholders (less aggressive)
+    // Step 6: Remove ad containers and placeholders
     const adSelectors = [
       '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner',
-      '.sidebar', '.social-media', '.popup', '.modal', '.overlay',
+      '.sidebar', '.popup', '.modal', '.overlay', '.promotion',
       'iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
       'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
-      'div[class*="sidebar"]', 'div[class*="popup"]', 'div[class*="overlay"]'
+      'div[class*="sidebar"]', 'div[class*="popup"]', 'div[class*="overlay"]',
+      'div[class*="sponsor"]', 'div[class*="advertisement"]', 'div[class*="promoted"]'
     ].join(', ');
 
-    document.querySelectorAll(adSelectors).forEach(el => {
-      const placeholders = el.querySelectorAll('.placeholder');
-      placeholders.forEach(ph => ph.remove());
-      el.remove();
+    document.querySelectorAll(adSelectors).forEach(el => el.remove());
+
+    // Step 7: Defer non-essential scripts
+    document.querySelectorAll('script:not([async]):not([defer])').forEach(script => {
+      script.defer = true;
     });
 
-    // 9. Force responsive design on mobile
-    document.body.style.width = '100%';
-    document.body.style.overflowX = 'hidden';
-
-    // 10. Defer non-essential scripts
-    document.querySelectorAll('script').forEach(script => {
-      if (!script.hasAttribute('async') && !script.hasAttribute('defer')) {
-        script.defer = true;
-      }
-    });
-
-    // 11. Use requestIdleCallback for non-critical tasks
+    // Step 8: Use requestIdleCallback for non-critical tasks
     if ('requestIdleCallback' in window) {
       requestIdleCallback(() => {
         // Perform non-essential background tasks here
