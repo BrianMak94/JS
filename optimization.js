@@ -40,7 +40,7 @@ function optimizePage() {
 
     // 5. IntersectionObserver for priority-based lazy loading
     const observerOptions = { rootMargin: '0px', threshold: 0.1 };
-    const observer = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const el = entry.target;
@@ -71,59 +71,38 @@ function optimizePage() {
 
     // 6. Lazy load images, media, and stylesheets based on priority
     document.querySelectorAll('img[data-src], video[data-src], audio[data-src]').forEach(media => {
-      const priority = media.dataset.priority || 'low';
-      const skeleton = document.createElement('div');
-      skeleton.className = `skeleton ${media.tagName.toLowerCase()}-skeleton`;
-      skeleton.style.height = media.height ? `${media.height}px` : 'auto';
-      media.parentNode.replaceChild(skeleton, media);
+      const container = media.closest('.main-content, .article, header, footer');
+      const priority = container ? (container.classList.contains('main-content') ? 'high' : 'medium') : 'low';
       media.dataset.priority = priority;
+      const skeleton = document.createElement('div');
+      skeleton.classList.add('skeleton', media.tagName.toLowerCase() === 'video' ? 'skeleton-video' : 'skeleton-audio');
+      skeleton.style.height = media.height + 'px';
+      media.parentNode.replaceChild(skeleton, media);
       observer.observe(skeleton);
     });
 
     document.querySelectorAll('link[rel="stylesheet"][data-lazy]').forEach(link => {
-      const priority = link.dataset.priority || 'low';
-      const skeleton = document.createElement('div');
-      skeleton.className = 'skeleton';
-      document.head.appendChild(skeleton);
+      const container = link.closest('.main-content, .article, header, footer');
+      const priority = container ? (container.classList.contains('main-content') ? 'high' : 'medium') : 'low';
       link.dataset.priority = priority;
+      const skeleton = document.createElement('div');
+      skeleton.classList.add('skeleton');
+      document.head.appendChild(skeleton);
       observer.observe(link);
     });
 
     // 7. Prefetch high-priority links in view
     const prefetchLimit = 10;
     let prefetchCount = 0;
-
-    const containerPriorities = {
-      '.main-content': 'high',
-      '.article': 'high',
-      '.post': 'high',
-      '.content': 'high',
-      '.page': 'high',
-      'header': 'high',
-      '.header': 'high',
-      'nav': 'medium',
-      '.section': 'medium',
-      '.container': 'medium',
-      '.wrapper': 'medium',
-      '.primary': 'medium',
-      '.secondary': 'medium',
-      '.top': 'medium',
-      '.sidebar': 'low',
-      '.aside': 'low',
-      '.footer': 'low',
-      '.bottom': 'low',
-      '.promotion': 'low',
-      '.social-media': 'low',
-      '.popup': 'low'
-    };
+    const priorityContainers = ['.main-content', '.article', 'header', 'footer'];
 
     const linkObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting && prefetchCount < prefetchLimit) {
           const link = entry.target;
           if (link.tagName === 'A' && link.href) {
-            const container = link.closest(Object.keys(containerPriorities).join(', '));
-            const priority = container ? containerPriorities['.' + container.classList[0]] || 'low' : 'low';
+            const container = link.closest(priorityContainers.join(', '));
+            const priority = priorityContainers.indexOf(container ? container.classList[0] : '') + 1;
 
             if (priority && prefetchCount < prefetchLimit) {
               const prefetchLink = document.createElement('link');
@@ -155,7 +134,8 @@ function optimizePage() {
     ].join(', ');
 
     document.querySelectorAll(adSelectors).forEach(el => {
-      el.querySelectorAll('.placeholder').forEach(ph => ph.remove());
+      const placeholders = el.querySelectorAll('.placeholder');
+      placeholders.forEach(ph => ph.remove());
       el.remove();
     });
 
