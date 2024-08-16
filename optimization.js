@@ -93,7 +93,7 @@
 
       // 5. Remove clearly ad-related elements
       const adSelectors = [
-        '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner'
+        '.ad', '.ads', '.advertisement', '.sponsor', '.promoted'
       ].join(', ');
 
       document.querySelectorAll(adSelectors).forEach(el => {
