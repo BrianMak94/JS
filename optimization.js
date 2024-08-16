@@ -86,11 +86,9 @@ function optimizePage() {
 
     // Remove ads
     const adSelectors = [
-      '.ad', '.ads', '.advertisement', '.sponsor', '.promoted', '.banner',
-      '.sidebar', '.social-media', '.popup', '.modal', '.overlay',
+      '.ad', '.ads', '.advertisement', 
       'iframe[src*="ads"]', 'div[id*="ad"]', 'script[src*="ads"]',
-      'div[class*="ad"]', 'div[class*="banner"]', 'div[class*="promotion"]',
-      'div[class*="sidebar"]', 'div[class*="popup"]', 'div[class*="overlay"]'
+      'div[class*="ad"]'
     ].join(', ');
 
     document.querySelectorAll(adSelectors).forEach(e => {
