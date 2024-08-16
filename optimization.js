@@ -31,9 +31,9 @@ function optimizePage() {
       const criticalCSS = `
         body { margin: 0; font-family: sans-serif; max-width: 100%; overflow-x: hidden; }
         img, video, iframe { max-width: 100%; height: auto; }
-        .skeleton { background: #f00; opacity: .3; border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; }
+        .skeleton { background: #888; opacity: .3; border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; }
         @keyframes pulse { 0% { opacity:.3; } 50% { opacity:.5; } 100% { opacity:.3; } }
-        .skeleton-image, .skeleton-video, .skeleton-audio { background: #00f; opacity: 3; border-radius: 4px; width: 100%; }
+        .skeleton-image, .skeleton-video, .skeleton-audio { background: #888; opacity: 3; border-radius: 4px; width: 100%; }
         .skeleton-text { height: 16px; margin: 8px 0; }
       `;
       const style = document.createElement('style');
