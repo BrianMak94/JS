@@ -9,125 +9,210 @@
 // ==/UserScript==
 
 (function() {
-  'use strict';
+  // Utility function for logging actions
+  function logAction(action, element) {
+    console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
+  }
 
-  const logAction = (action, el) => console.log(`optimizer: ${action}: ${el?.className || el?.src || el?.href || ''}`);
-  
-  const throttle = (fn, limit) => {
+  // Throttle function to limit the rate at which a function can be executed
+  function throttle(fn, limit) {
     let lastCall = 0;
-    return (...args) => {
+    return function(...args) {
       const now = Date.now();
-      if (now - lastCall >= limit) {
-        lastCall = now;
-        fn(...args);
-      }
+      if (now - lastCall < limit) return;
+      lastCall = now;
+      fn(...args);
     };
-  };
+  }
 
-  const optimizePage = () => {
+  // Function to handle animations
+  const animate = throttle(() => {
+    // Animation code here
+  }, 1000 / 25); // 25 FPS
+
+  // Optimize page function
+  function optimizePage() {
     try {
-      document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"], script[src]:not([src*="essential"])').forEach(el => {
-        logAction('Removing element', el);
-        el.remove();
+      // Remove problematic iframes and non-essential scripts
+      document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"]').forEach(iframe => {
+        logAction('Removing problematic iframe', iframe);
+        iframe.remove();
       });
 
-      document.querySelectorAll('style').forEach(style => {
-        if (style.textContent.includes('unused-class')) {
-          logAction('Removing unused style', style);
-          style.remove();
+      document.querySelectorAll('script').forEach(script => {
+        if (script.src && !script.src.includes('essential')) {
+          logAction('Removing non-essential script', script);
+          script.remove();
         }
       });
 
-      if (!document.querySelector('meta[name="viewport"]')) {
+      // Remove unused styles (more robust approach)
+      const unusedStyles = [];
+      document.querySelectorAll('style').forEach(style => {
+        const styleText = style.textContent;
+        if (styleText.includes('unused-class')) {
+          logAction('Removing style with unused-class', style);
+          unusedStyles.push(style);
+        }
+      });
+      unusedStyles.forEach(style => style.remove());
+
+      // Viewport meta tag for responsiveness
+      const viewportMeta = document.querySelector('meta[name="viewport"]');
+      if (!viewportMeta) {
+        logAction('Adding viewport meta tag');
         const meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
         document.head.appendChild(meta);
       }
 
+      // Disable video autoplay
       document.querySelectorAll('video[autoplay]').forEach(video => {
         logAction('Disabling video autoplay', video);
         video.removeAttribute('autoplay');
       });
 
-      document.querySelectorAll('script:not([async]):not([defer]):not([src*="critical"])').forEach(script => {
-        logAction('Deferring script', script);
-        script.defer = true;
+      // Defer non-essential scripts
+      document.querySelectorAll('script:not([async]):not([defer])').forEach(script => {
+        if (!script.src.includes('critical')) {
+          logAction('Deferring script', script);
+          script.defer = true;
+        }
       });
 
-      const lazyLoadObserver = new IntersectionObserver(entries => {
-        entries.forEach(({ isIntersecting, target: el }) => {
-          if (isIntersecting && el.dataset.src) {
-            logAction('Lazy loading element', el);
-            el.src = el.dataset.src;
-            el.removeAttribute('data-src');
-            lazyLoadObserver.unobserve(el);
+      // Lazy loading setup
+      const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            if (el.dataset.src) {
+              logAction('Lazy loading element', el);
+              el.src = el.dataset.src;
+              el.removeAttribute('data-src');
+            }
+            observer.unobserve(el);
           }
         });
       });
 
-      document.querySelectorAll('[data-src]').forEach(el => lazyLoadObserver.observe(el));
+      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+        lazyLoadObserver.observe(media);
+      });
 
-      const prefetchObserver = new IntersectionObserver(entries => {
-        entries.forEach(({ isIntersecting, target: link }) => {
-          const href = link.href || '';
-          if (isIntersecting && !isMediaLink(href)) {
-            logAction('Prefetching link', link);
-            const prefetchLink = document.createElement('link');
-            prefetchLink.rel = 'prefetch';
-            prefetchLink.href = href;
-            document.head.appendChild(prefetchLink);
-            prefetchObserver.unobserve(link);
+      // Prefetching setup (improved)
+      const prefetchBlacklistSelectors = [
+        '[class*="track"]', '[class*="analytics"]', '[class*="popup"]',
+        '[class*="modal"]', '[class*="overlay"]', '[class*="signup"]',
+        '[class*="paywall"]', '[class*="cookie"]', '[class*="subscribe"]',
+        '[class*="banner"]', '[class*="notification"]', '[class*="announce"]',
+        '[class*="footer"]', '[class*="sidebar"]', '[class*="related"]',
+        '[class*="partner"]', '[class*="admin"]', '[class*="dashboard"]',
+        '[class*="settings"]', '[hidden]', '[class*="hidden"]',
+        '[class*="offscreen"]'
+      ].join(', ');
+
+      const mediaExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm'];
+      const isMediaLink = href => mediaExtensions.some(ext => href.endsWith(ext));
+
+      const prefetchObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const link = entry.target;
+            const linkHref = link.href || '';
+            if (linkHref && !link.matches(prefetchBlacklistSelectors) && !isMediaLink(linkHref)) {
+              logAction('Prefetching link', link);
+              const prefetchLink = document.createElement('link');
+              prefetchLink.rel = 'prefetch';
+              prefetchLink.href = linkHref;
+              document.head.appendChild(prefetchLink);
+              observer.unobserve(link);
+            }
           }
         });
       }, { threshold: 0.1 });
 
-      const isMediaLink = href => /\.(jpg|jpeg|png|gif|webp|mp4|webm)$/.test(href);
+      // Observe all links
+      document.querySelectorAll('a[href]').forEach(link => {
+        const linkHref = link.href || '';
+        if (linkHref && !link.matches(prefetchBlacklistSelectors) && !isMediaLink(linkHref)) {
+          logAction('Observing link for prefetching', link);
+          prefetchObserver.observe(link);
+        }
+      });
 
-      document.querySelectorAll('a[href]').forEach(link => prefetchObserver.observe(link));
-
-      const mutationObserver = new MutationObserver(mutations => {
-        mutations.forEach(({ target }) => {
-          if (getComputedStyle(target).display !== 'none') {
-            prefetchObserver.observe(target);
+      // MutationObserver to handle visibility changes for hidden or obstructed links (improved)
+      const mutationObserver = new MutationObserver(mutationsList => {
+        mutationsList.forEach(mutation => {
+          if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+            const target = mutation.target;
+            if (target.matches('a[href]') && getComputedStyle(target).display !== 'none') {
+              logAction('Element became visible:', target);
+              prefetchObserver.observe(target);
+            }
           }
         });
       });
 
-      document.querySelectorAll('img[data-src], video[data-src]').forEach(el => mutationObserver.observe(el, { attributes: true, attributeFilter: ['style', 'class'] }));
+      // Observe only links that might become visible (e.g., elements loaded via lazy loading)
+      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+        mutationObserver.observe(media, { attributes: true, attributeFilter: ['style', 'class'] });
+      });
 
+      // Simplify CSS animations and transitions (improved)
       document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('*').forEach(el => {
-          const style = getComputedStyle(el);
-          if (style.animationName !== 'none') el.style.animationName = 'none';
-          if (style.transitionProperty !== 'none') el.style.transitionProperty = 'none';
-          if (style.animationName === 'none' && style.transitionProperty === 'none') {
+          const computedStyle = getComputedStyle(el);
+
+          // Simplify animations
+          if (computedStyle.animationName && computedStyle.animationName !== 'none') {
+            el.style.animationName = 'none'; // Remove existing animations
+          }
+
+          // Simplify transitions
+          if (computedStyle.transitionProperty && computedStyle.transitionProperty !== 'none') {
+            el.style.transitionProperty = 'none'; // Remove existing transitions
+          }
+
+          // Apply a simple fade-in effect for visibility (combined with animation/transition simplification)
+          if (computedStyle.animationName === 'none' && computedStyle.transitionProperty === 'none') {
             el.style.transition = 'opacity 1s ease-in-out';
             el.style.opacity = '1';
           }
         });
       });
 
+      // Use requestIdleCallback for non-critical background tasks
       if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {});
+        logAction('Using requestIdleCallback for non-critical tasks');
+        requestIdleCallback(() => {
+          // Additional non-essential tasks can be performed here
+        });
+      } else {
+        logAction('requestIdleCallback is not supported');
       }
+
     } catch (error) {
       console.error('Error optimizing page:', error);
     }
-  };
+  }
 
-  const animate = throttle(() => {}, 1000 / 25);
-
+  // Ensure optimizePage runs as early as possible
   if (document.readyState === 'loading') {
+    console.log('Document is loading, adding DOMContentLoaded event listener.');
     document.addEventListener('DOMContentLoaded', optimizePage);
   } else {
+    console.log('Document is already loaded, running optimizePage.');
     requestAnimationFrame(optimizePage);
   }
 
+  // Fallback to ensure optimizePage runs if injected late
+  console.log('Adding load event listener for fallback.');
   window.addEventListener('load', optimizePage);
+
+  // Request animation frame for throttled animations
   requestAnimationFrame(() => {
     animate();
-    requestAnimationFrame(() => animate());
+    requestAnimationFrame(() => animate()); // Recursive call to ensure throttle applies
   });
-
 })();
