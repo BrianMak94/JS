@@ -15,16 +15,16 @@
       });
 
       // Viewport meta tag for responsiveness
-      const viewportMeta = document.querySelector('meta[name="viewport"]');
-      if (!viewportMeta) {
-        logAction('Adding viewport meta tag');
-        const meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-        document.head.appendChild(meta);
-      } else {
-        logAction('Viewport meta tag already present');
-      }
+      //const viewportMeta = document.querySelector('meta[name="viewport"]');
+      //if (!viewportMeta) {
+        //logAction('Adding viewport meta tag');
+        //const meta = document.createElement('meta');
+        //meta.name = 'viewport';
+        //meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+        //document.head.appendChild(meta);
+      //} else {
+        //logAction('Viewport meta tag already present');
+      //}
 
       // Disable video autoplay
       document.querySelectorAll('video[autoplay]').forEach(video => {
