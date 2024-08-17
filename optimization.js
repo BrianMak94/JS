@@ -76,7 +76,7 @@
         lazyLoadObserver.observe(media);
       });
 
-      // Prefetching logic after user stops scrolling
+      // Prefetching logic after user stops scrolling and on load
       const prefetchBlacklistSelectors = [
         '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*',
         '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*',
@@ -88,19 +88,27 @@
       const prefetchBlacklistClasses = prefetchBlacklistSelectors.split(',').map(selector => selector.replace('.', ''));
       const prefetchLimit = 10; // Set the limit for the number of links to prefetch
       let prefetchCount = 0;
-      let isScrolling;
-      const scrollTimeout = 500; // Time in milliseconds to wait after scrolling stops
+      let isScrolling = false;
+      let scrollTimeout = null;
+      const scrollDelay = 500; // Time in milliseconds to wait after scrolling stops
 
       function handleScroll() {
-        clearTimeout(isScrolling);
-        isScrolling = setTimeout(() => {
-          // Execute prefetching logic after scrolling stops
-          console.log('User stopped scrolling, starting prefetch.');
+        if (!isScrolling) {
+          isScrolling = true;
+          console.log('User is scrolling, pausing prefetch.');
+        }
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          isScrolling = false;
+          console.log('User stopped scrolling, resuming prefetch.');
           setupPrefetch();
-        }, scrollTimeout);
+        }, scrollDelay);
       }
 
       function setupPrefetch() {
+        if (isScrolling) {
+          return; // Don't run prefetch if user is still scrolling
+        }
         const prefetchObserver = new IntersectionObserver((entries, observer) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -139,6 +147,9 @@
 
       // Attach scroll event listener
       window.addEventListener('scroll', handleScroll);
+
+      // Prefetch links currently in view on load
+      setupPrefetch();
 
       // Remove ads and overlays
       const adSelectors = [
