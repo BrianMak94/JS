@@ -1,4 +1,6 @@
 (function() {
+  // Version 1.0.0
+
   function optimizePage() {
     try {
       // Utility function for logging actions
@@ -34,9 +36,8 @@
 
       // Critical CSS for lazy loading skeleton
       const criticalCSS = `
-        .skeleton { background: #888; border-radius: 4px; opacity: 0.8; }
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.15; } 100% { opacity: 0.3; } }
-        .skeleton { animation: pulse 1.5s infinite ease-in-out; }
+        .skeleton { animation: pulse 1s infinite ease-in-out; }
       `;
       const style = document.createElement('style');
       style.textContent = criticalCSS;
@@ -78,22 +79,18 @@
 
       // Setup prefetching with blacklist
       const prefetchBlacklistSelectors = [
-        '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*', 
+        '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*', 
         '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*', 
         '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*', 
         '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]', 
         '.hidden*', '.offscreen*'
       ].join(', ');
 
-      const hasValidHref = (link) => link.href && !link.href.startsWith('#') && link.href.trim() !== '';
-
       const prefetchObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const link = entry.target;
-            const parentMatchesBlacklist = Array.from(link.closest('div, section, article, aside, header, main, footer')?.classList || [])
-              .some(cls => prefetchBlacklistSelectors.includes(`.${cls}`));
-            if (!parentMatchesBlacklist && hasValidHref(link)) {
+            if (link.href && !link.matches(prefetchBlacklistSelectors)) {
               logAction('Prefetching link', link);
               const prefetchLink = document.createElement('link');
               prefetchLink.rel = 'prefetch';
@@ -105,64 +102,71 @@
         });
       });
 
+      // Observe all links and filter based on blacklist
       const observeLinks = () => {
         document.querySelectorAll('a').forEach(link => {
           const parentMatchesBlacklist = Array.from(link.closest('div, section, article, aside, header, main, footer')?.classList || [])
             .some(cls => prefetchBlacklistSelectors.includes(`.${cls}`));
-          if (!parentMatchesBlacklist && hasValidHref(link)) {
+
+          if (!parentMatchesBlacklist) {
             logAction('Observing link for prefetching', link);
             prefetchObserver.observe(link);
           }
         });
       };
 
-      observeLinks();
+      observeLinks(); // Initial observation
 
-      // Remove ads and overlays
-      const adSelectors = [
-        '[class^="ad-"]', '[class*=" ad-"]', '[class$="-ad"]', '[class*="ads"]',
-        '[class*="-ads"]', '[class*="ads-"]'
-      ].join(', ');
-      
-      document.querySelectorAll(adSelectors).forEach(el => {
-        logAction('Removing ad element', el);
-        el.remove();
-      });
-
-      const overlaySelectors = [
-        '.paywall', '.subscription', '.signup', '.modal', '.popup', '.overlay',
-        '.cookie-consent', '.cookie-banner', '.notification', '.banner', '.announce'
-      ].join(', ');
-
-      document.querySelectorAll(overlaySelectors).forEach(el => {
-        logAction('Removing overlay element', el);
-        el.remove();
-      });
-
-      // Use requestIdleCallback for non-critical background tasks
-      if ('requestIdleCallback' in window) {
-        logAction('Using requestIdleCallback for non-critical tasks');
-        requestIdleCallback(() => {
-          // Additional non-essential tasks can be performed here
+      // Reobserve links that become unobstructed
+      const reobserveObstructedLinks = () => {
+        document.querySelectorAll('a').forEach(link => {
+          if (!prefetchObserver.observing.has(link)) {
+            const rect = link.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+              logAction('Reobserving unobstructed link', link);
+              prefetchObserver.observe(link);
+            }
+          }
         });
+      };
+
+      // Handle scroll and animation events
+      const handleScrollOrAnimation = () => {
+        reobserveObstructedLinks();
+      };
+
+      window.addEventListener('scroll', handleScrollOrAnimation);
+      window.addEventListener('animationstart', handleScrollOrAnimation);
+      window.addEventListener('click', handleScrollOrAnimation);
+
+      // Lower the framerate of animations and transitions
+      const styleFramerate = document.createElement('style');
+      styleFramerate.textContent = `
+        * {
+          animation-duration: 2s !important;
+          transition-duration: 2s !important;
+        }
+      `;
+      document.head.appendChild(styleFramerate);
+      logAction('Lowered framerate of animations and transitions');
+
+      // Ensure optimizePage runs as early as possible
+      if (document.readyState === 'loading') {
+        console.log('optimizer: Document is loading, adding DOMContentLoaded event listener.');
+        document.addEventListener('DOMContentLoaded', optimizePage);
       } else {
-        logAction('requestIdleCallback is not supported');
+        console.log('optimizer: Document is already loaded, running optimizePage.');
+        requestAnimationFrame(optimizePage);
       }
+
+      // Fallback to ensure optimizePage runs if injected late
+      console.log('optimizer: Adding load event listener for fallback.');
+      window.addEventListener('load', optimizePage);
     } catch (error) {
       console.error('Error optimizing page:', error);
     }
   }
 
-  // Ensure optimizePage runs as early as possible
-  if (document.readyState === 'loading') {
-    console.log('optimizer: Document is loading, adding DOMContentLoaded event listener.');
-    document.addEventListener('DOMContentLoaded', optimizePage);
-  } else {
-    console.log('optimizer: Document is already loaded, running optimizePage.');
-    requestAnimationFrame(optimizePage);
-  }
-
-  // Fallback to ensure optimizePage runs if injected late
-  console.log('optimizer: Adding load event listener for fallback.');
-  window.addEventListener('load', optimizePage);
+  // Initial call to optimize the page
+  optimizePage();
 })();
