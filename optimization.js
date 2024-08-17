@@ -86,7 +86,7 @@
       ].join(', ');
 
       const prefetchBlacklistClasses = prefetchBlacklistSelectors.split(',').map(selector => selector.replace('.', ''));
-      const prefetchLimit = 50; // Set the limit for the number of links to prefetch
+      const prefetchLimit = 1000; // Set the limit for the number of links to prefetch
       let prefetchCount = 0;
       let isScrolling = false;
       let scrollTimeout = null;
