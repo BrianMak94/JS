@@ -76,42 +76,76 @@
         lazyLoadObserver.observe(media);
       });
 
-      // Setup prefetching with blacklist
+      // Prefetching logic after user stops scrolling
       const prefetchBlacklistSelectors = [
-        '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*', 
-        '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*', 
-        '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*', 
-        '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]', 
+        '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*',
+        '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*',
+        '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*',
+        '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]',
         '.hidden*', '.offscreen*'
       ].join(', ');
 
-      const prefetchObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const link = entry.target;
-            if (!link.matches(prefetchBlacklistSelectors)) {
-              logAction('Prefetching link', link);
-              const prefetchLink = document.createElement('link');
-              prefetchLink.rel = 'prefetch';
-              prefetchLink.href = link.href;
-              document.head.appendChild(prefetchLink);
-              observer.unobserve(link);
-            }
-          }
-        });
-      });
+      const prefetchBlacklistClasses = prefetchBlacklistSelectors.split(',').map(selector => selector.replace('.', ''));
+      const prefetchLimit = 10; // Set the limit for the number of links to prefetch
+      let prefetchCount = 0;
+      let isScrolling;
+      const scrollTimeout = 500; // Time in milliseconds to wait after scrolling stops
 
-      document.querySelectorAll('a').forEach(link => {
-        logAction('Observing link for prefetching', link);
-        prefetchObserver.observe(link);
-      });
+      function handleScroll() {
+        clearTimeout(isScrolling);
+        isScrolling = setTimeout(() => {
+          // Execute prefetching logic after scrolling stops
+          console.log('User stopped scrolling, starting prefetch.');
+          setupPrefetch();
+        }, scrollTimeout);
+      }
+
+      function setupPrefetch() {
+        const prefetchObserver = new IntersectionObserver((entries, observer) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const link = entry.target;
+              const classList = Array.from(link.classList);
+              if (link.tagName === 'A' && !classList.some(cls => prefetchBlacklistClasses.some(blacklistClass => cls.startsWith(blacklistClass)))) {
+                if (prefetchCount < prefetchLimit) {
+                  const href = link.href.trim();
+                  if (href) {
+                    logAction('Prefetching link', link);
+                    const prefetchLink = document.createElement('link');
+                    prefetchLink.rel = 'prefetch';
+                    prefetchLink.href = href;
+                    document.head.appendChild(prefetchLink);
+                    prefetchCount++;
+                    observer.unobserve(link);
+                  } else {
+                    logAction('Link href is empty or invalid', link);
+                  }
+                } else {
+                  logAction('Prefetch limit reached');
+                  observer.unobserve(link);
+                }
+              } else {
+                logAction('Skipping link due to blacklist', link);
+              }
+            }
+          });
+        });
+
+        document.querySelectorAll('a').forEach(link => {
+          logAction('Observing link for prefetching', link);
+          prefetchObserver.observe(link);
+        });
+      }
+
+      // Attach scroll event listener
+      window.addEventListener('scroll', handleScroll);
 
       // Remove ads and overlays
       const adSelectors = [
         '[class^="ad-"]', '[class*=" ad-"]', '[class$="-ad"]', '[class*="ads"]',
         '[class*="-ads"]', '[class*="ads-"]'
       ].join(', ');
-      
+
       document.querySelectorAll(adSelectors).forEach(el => {
         logAction('Removing ad element', el);
         el.remove();
