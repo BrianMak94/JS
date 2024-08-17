@@ -1,14 +1,15 @@
 // ==UserScript==
-// @name         Page Optimizer
-// @namespace    http://yournamespacehere.com
+// @name         Enhanced Page Optimizer
+// @namespace    http://tampermonkey.net/
 // @version      1.1
-// @description  Optimizes page performance by removing non-essential elements, deferring scripts, blocking ads and overlays, and enabling lazy loading.
-// @author       Your Name
+// @description  Optimizes page by removing ads, overlays, and applying various performance improvements
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
+  'use strict';
+
   // Utility function for logging actions
   function logAction(action, element) {
     console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
@@ -33,11 +34,9 @@
   // Function to block ads and overlays
   function blockAdsAndOverlays() {
     const adSelectors = [
-      '[class*="ad"]', '[class*="ads"]', '[class*="advert"]',
-      '[class*="sponsored"]', '[class*="banner"]', '[class*="promo"]',
+      '[class*="ad-"]', '[class*="ads-"]', '[class*="-ad"]',
       '[class*="overlay"]', '[class*="popup"]', '[class*="modal"]',
-      '[class*="cookie"]', '[class*="signup"]', '[class*="paywall"]',
-      '[class*="notification"]', '[class*="alert"]'
+      '[class*="banner"]', '[class*="notification"]'
     ].join(', ');
 
     document.querySelectorAll(adSelectors).forEach(el => {
