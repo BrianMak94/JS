@@ -3,7 +3,7 @@
     try {
       // Utility function for logging actions
       function logAction(action, element) {
-        console.log(`${action}: ${element ? element.className || element.src || element.href : ''}`);
+        console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
       }
 
       // Remove problematic iframes
@@ -51,90 +51,79 @@
         }
       });
 
-      // Prefetching logic with container and parent class check
+      // Setup lazy loading
+      const classPriority = ['header', 'main'];
+      const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            if (classPriority.some(cls => el.classList.contains(cls))) {
+              logAction('Lazy loading element', el);
+              if (el.dataset.src) {
+                el.src = el.dataset.src;
+                el.classList.remove('skeleton');
+                el.removeAttribute('data-src');
+              }
+              observer.unobserve(el);
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+        media.classList.add('skeleton');
+        logAction('Adding skeleton and observing media for lazy loading', media);
+        lazyLoadObserver.observe(media);
+      });
+
+      // Setup prefetching with blacklist
       const prefetchBlacklistSelectors = [
-        '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*',
-        '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*',
-        '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*',
-        '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]',
+        '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*', 
+        '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*', 
+        '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*', 
+        '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]', 
         '.hidden*', '.offscreen*'
       ].join(', ');
 
-      const prefetchBlacklistClasses = prefetchBlacklistSelectors.split(',').map(selector => selector.replace('.', ''));
-      let prefetchCount = 0;
-      let prefetchingPaused = false;
-      const prefetchLimit = 10; // Set the limit for the number of links to prefetch
-      const scrollTimeout = 500; // Time in milliseconds to wait after scrolling stops
+      const hasValidHref = (link) => link.href && !link.href.startsWith('#') && link.href.trim() !== '';
 
-      function setupPrefetch() {
-        const prefetchObserver = new IntersectionObserver((entries, observer) => {
-          if (prefetchingPaused) return;
-
-          entries.forEach(entry => {
-            if (entry.isIntersecting && prefetchCount < prefetchLimit) {
-              const link = entry.target;
-              const href = link.href.trim();
-              if (href) {
-                logAction('Prefetching link', link);
-                const prefetchLink = document.createElement('link');
-                prefetchLink.rel = 'prefetch';
-                prefetchLink.href = href;
-                document.head.appendChild(prefetchLink);
-                prefetchCount++;
-                observer.unobserve(link);
-              } else {
-                logAction('Link href is empty or invalid', link);
-              }
+      const prefetchObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const link = entry.target;
+            const parentMatchesBlacklist = Array.from(link.closest('div, section, article, aside, header, main, footer')?.classList || [])
+              .some(cls => prefetchBlacklistSelectors.includes(`.${cls}`));
+            if (!parentMatchesBlacklist && hasValidHref(link)) {
+              logAction('Prefetching link', link);
+              const prefetchLink = document.createElement('link');
+              prefetchLink.rel = 'prefetch';
+              prefetchLink.href = link.href;
+              document.head.appendChild(prefetchLink);
+              observer.unobserve(link);
             }
-          });
-        });
-
-        // Check each link and its ancestors before observing
-        document.querySelectorAll('a').forEach(link => {
-          let element = link;
-          let shouldObserve = true;
-
-          // Check class names of the link and its parent containers
-          for (let i = 0; i < 3; i++) {
-            const classList = Array.from(element.classList);
-            if (classList.some(cls => prefetchBlacklistClasses.some(blacklistClass => cls.startsWith(blacklistClass)))) {
-              logAction('Skipping observation due to blacklist', link);
-              shouldObserve = false;
-              break;
-            }
-            element = element.parentElement;
-            if (!element) break;
           }
+        });
+      });
 
-          if (shouldObserve) {
+      const observeLinks = () => {
+        document.querySelectorAll('a').forEach(link => {
+          const parentMatchesBlacklist = Array.from(link.closest('div, section, article, aside, header, main, footer')?.classList || [])
+            .some(cls => prefetchBlacklistSelectors.includes(`.${cls}`));
+          if (!parentMatchesBlacklist && hasValidHref(link)) {
             logAction('Observing link for prefetching', link);
             prefetchObserver.observe(link);
           }
         });
-      }
+      };
 
-      // Prefetch links currently in view on load
-      setupPrefetch();
-
-      function handleScroll() {
-        prefetchingPaused = true;
-        clearTimeout(isScrolling);
-        isScrolling = setTimeout(() => {
-          logAction('User stopped scrolling, resuming prefetch.');
-          prefetchingPaused = false;
-          setupPrefetch();
-        }, scrollTimeout);
-      }
-
-      // Attach scroll event listener
-      window.addEventListener('scroll', handleScroll);
+      observeLinks();
 
       // Remove ads and overlays
       const adSelectors = [
         '[class^="ad-"]', '[class*=" ad-"]', '[class$="-ad"]', '[class*="ads"]',
         '[class*="-ads"]', '[class*="ads-"]'
       ].join(', ');
-
+      
       document.querySelectorAll(adSelectors).forEach(el => {
         logAction('Removing ad element', el);
         el.remove();
@@ -166,14 +155,14 @@
 
   // Ensure optimizePage runs as early as possible
   if (document.readyState === 'loading') {
-    console.log('Document is loading, adding DOMContentLoaded event listener.');
+    console.log('optimizer: Document is loading, adding DOMContentLoaded event listener.');
     document.addEventListener('DOMContentLoaded', optimizePage);
   } else {
-    console.log('Document is already loaded, running optimizePage.');
+    console.log('optimizer: Document is already loaded, running optimizePage.');
     requestAnimationFrame(optimizePage);
   }
 
   // Fallback to ensure optimizePage runs if injected late
-  console.log('Adding load event listener for fallback.');
+  console.log('optimizer: Adding load event listener for fallback.');
   window.addEventListener('load', optimizePage);
 })();
