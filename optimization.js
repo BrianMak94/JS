@@ -51,32 +51,7 @@
         }
       });
 
-      // Setup lazy loading
-      const classPriority = ['header', 'main'];
-      const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const el = entry.target;
-            if (classPriority.some(cls => el.classList.contains(cls))) {
-              logAction('Lazy loading element', el);
-              if (el.dataset.src) {
-                el.src = el.dataset.src;
-                el.classList.remove('skeleton');
-                el.removeAttribute('data-src');
-              }
-              observer.unobserve(el);
-            }
-          }
-        });
-      });
-
-      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
-        media.classList.add('skeleton');
-        logAction('Adding skeleton and observing media for lazy loading', media);
-        lazyLoadObserver.observe(media);
-      });
-
-      // Prefetching logic after user stops scrolling and on load
+      // Prefetching logic with container and parent class check
       const prefetchBlacklistSelectors = [
         '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*',
         '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*',
@@ -86,70 +61,73 @@
       ].join(', ');
 
       const prefetchBlacklistClasses = prefetchBlacklistSelectors.split(',').map(selector => selector.replace('.', ''));
-      const prefetchLimit = 1000; // Set the limit for the number of links to prefetch
       let prefetchCount = 0;
-      let isScrolling = false;
-      let scrollTimeout = null;
-      const scrollDelay = 500; // Time in milliseconds to wait after scrolling stops
-
-      function handleScroll() {
-        if (!isScrolling) {
-          isScrolling = true;
-          console.log('User is scrolling, pausing prefetch.');
-        }
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          isScrolling = false;
-          console.log('User stopped scrolling, resuming prefetch.');
-          setupPrefetch();
-        }, scrollDelay);
-      }
+      let prefetchingPaused = false;
+      const prefetchLimit = 10; // Set the limit for the number of links to prefetch
+      const scrollTimeout = 500; // Time in milliseconds to wait after scrolling stops
 
       function setupPrefetch() {
-        if (isScrolling) {
-          return; // Don't run prefetch if user is still scrolling
-        }
         const prefetchObserver = new IntersectionObserver((entries, observer) => {
+          if (prefetchingPaused) return;
+
           entries.forEach(entry => {
-            if (entry.isIntersecting) {
+            if (entry.isIntersecting && prefetchCount < prefetchLimit) {
               const link = entry.target;
-              const classList = Array.from(link.classList);
-              if (link.tagName === 'A' && !classList.some(cls => prefetchBlacklistClasses.some(blacklistClass => cls.startsWith(blacklistClass)))) {
-                if (prefetchCount < prefetchLimit) {
-                  const href = link.href.trim();
-                  if (href) {
-                    logAction('Prefetching link', link);
-                    const prefetchLink = document.createElement('link');
-                    prefetchLink.rel = 'prefetch';
-                    prefetchLink.href = href;
-                    document.head.appendChild(prefetchLink);
-                    prefetchCount++;
-                    observer.unobserve(link);
-                  } else {
-                    logAction('Link href is empty or invalid', link);
-                  }
-                } else {
-                  logAction('Prefetch limit reached');
-                  observer.unobserve(link);
-                }
+              const href = link.href.trim();
+              if (href) {
+                logAction('Prefetching link', link);
+                const prefetchLink = document.createElement('link');
+                prefetchLink.rel = 'prefetch';
+                prefetchLink.href = href;
+                document.head.appendChild(prefetchLink);
+                prefetchCount++;
+                observer.unobserve(link);
               } else {
-                logAction('Skipping link due to blacklist', link);
+                logAction('Link href is empty or invalid', link);
               }
             }
           });
         });
 
+        // Check each link and its ancestors before observing
         document.querySelectorAll('a').forEach(link => {
-          logAction('Observing link for prefetching', link);
-          prefetchObserver.observe(link);
+          let element = link;
+          let shouldObserve = true;
+
+          // Check class names of the link and its parent containers
+          for (let i = 0; i < 3; i++) {
+            const classList = Array.from(element.classList);
+            if (classList.some(cls => prefetchBlacklistClasses.some(blacklistClass => cls.startsWith(blacklistClass)))) {
+              logAction('Skipping observation due to blacklist', link);
+              shouldObserve = false;
+              break;
+            }
+            element = element.parentElement;
+            if (!element) break;
+          }
+
+          if (shouldObserve) {
+            logAction('Observing link for prefetching', link);
+            prefetchObserver.observe(link);
+          }
         });
+      }
+
+      // Prefetch links currently in view on load
+      setupPrefetch();
+
+      function handleScroll() {
+        prefetchingPaused = true;
+        clearTimeout(isScrolling);
+        isScrolling = setTimeout(() => {
+          logAction('User stopped scrolling, resuming prefetch.');
+          prefetchingPaused = false;
+          setupPrefetch();
+        }, scrollTimeout);
       }
 
       // Attach scroll event listener
       window.addEventListener('scroll', handleScroll);
-
-      // Prefetch links currently in view on load
-      setupPrefetch();
 
       // Remove ads and overlays
       const adSelectors = [
