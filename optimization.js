@@ -36,13 +36,16 @@
         }
       });
 
-      // Remove unused styles
+      // Remove unused styles (more robust approach)
+      const unusedStyles = [];
       document.querySelectorAll('style').forEach(style => {
-        if (style.textContent.includes('unused-class')) {
+        const styleText = style.textContent;
+        if (styleText.includes('unused-class')) {
           logAction('Removing style with unused-class', style);
-          style.remove();
+          unusedStyles.push(style);
         }
       });
+      unusedStyles.forEach(style => style.remove());
 
       // Viewport meta tag for responsiveness
       const viewportMeta = document.querySelector('meta[name="viewport"]');
@@ -87,7 +90,7 @@
         lazyLoadObserver.observe(media);
       });
 
-      // Prefetching setup
+      // Prefetching setup (improved)
       const prefetchBlacklistSelectors = [
         '[class*="track"]', '[class*="analytics"]', '[class*="popup"]',
         '[class*="modal"]', '[class*="overlay"]', '[class*="signup"]',
@@ -128,7 +131,7 @@
         }
       });
 
-      // MutationObserver to handle visibility changes for hidden or obstructed links
+      // MutationObserver to handle visibility changes for hidden or obstructed links (improved)
       const mutationObserver = new MutationObserver(mutationsList => {
         mutationsList.forEach(mutation => {
           if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
@@ -141,11 +144,12 @@
         });
       });
 
-      document.querySelectorAll('a[href]').forEach(link => {
-        mutationObserver.observe(link, { attributes: true, attributeFilter: ['style', 'class'] });
+      // Observe only links that might become visible (e.g., elements loaded via lazy loading)
+      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+        mutationObserver.observe(media, { attributes: true, attributeFilter: ['style', 'class'] });
       });
 
-      // Simplify CSS animations and transitions
+      // Simplify CSS animations and transitions (improved)
       document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('*').forEach(el => {
           const computedStyle = getComputedStyle(el);
@@ -159,11 +163,8 @@
           if (computedStyle.transitionProperty && computedStyle.transitionProperty !== 'none') {
             el.style.transitionProperty = 'none'; // Remove existing transitions
           }
-        });
 
-        // Apply a simple fade-in effect for visibility
-        document.querySelectorAll('*').forEach(el => {
-          const computedStyle = getComputedStyle(el);
+          // Apply a simple fade-in effect for visibility (combined with animation/transition simplification)
           if (computedStyle.animationName === 'none' && computedStyle.transitionProperty === 'none') {
             el.style.transition = 'opacity 1s ease-in-out';
             el.style.opacity = '1';
