@@ -1,4 +1,3 @@
-// Version 2.0.8
 (function() {
   function optimizePage() {
     try {
@@ -7,107 +6,17 @@
         console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
       }
 
-      // Remove problematic iframes
+      // Configuration
+      const MAX_PREFETCHES = 10; // Limit for number of active prefetch requests
+      let activePrefetchCount = 0; // Counter for active prefetch requests
+
+      // Remove problematic iframes and ads
       document.querySelectorAll('iframe').forEach(iframe => {
         if (/ads|track|analytics/.test(iframe.src || '')) {
           logAction('Removing problematic iframe', iframe);
           iframe.remove();
         }
       });
-
-      // Viewport meta tag for responsiveness
-      const viewportMeta = document.querySelector('meta[name="viewport"]');
-      if (!viewportMeta) {
-        logAction('Adding viewport meta tag');
-        const meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-        document.head.appendChild(meta);
-      } else {
-        logAction('Viewport meta tag already present');
-      }
-
-      // Disable video autoplay
-      document.querySelectorAll('video[autoplay]').forEach(video => {
-        logAction('Disabling video autoplay', video);
-        video.removeAttribute('autoplay');
-      });
-
-      // Apply 50% framerate reduction to animations and transitions
-      const framerateCSS = `
-        * {
-          animation-duration: 200% !important;
-          transition-duration: 200% !important;
-        }
-      `;
-      const style = document.createElement('style');
-      style.textContent = framerateCSS;
-      document.head.appendChild(style);
-      logAction('Applied 50% framerate reduction');
-
-      // Defer non-essential scripts
-      document.querySelectorAll('script:not([async]):not([defer])').forEach(script => {
-        if (!script.src.includes('critical')) {
-          logAction('Deferring script', script);
-          script.defer = true;
-        }
-      });
-
-      // Setup prefetching with blacklist
-      const prefetchBlacklistSelectors = [
-        '.ad*', '.track*', '.analytics*', '.popup*', '.modal*', '.overlay*',
-        '.signup*', '.paywall*', '.cookie*', '.subscribe*', '.banner*',
-        '.notification*', '.announce*', '.footer*', '.sidebar*', '.related*',
-        '.partner*', '.admin*', '.dashboard*', '.settings*', '[hidden]',
-        '.hidden*', '.offscreen*'
-      ];
-
-      const prefetchObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const link = entry.target;
-            const linkHref = link.getAttribute('href');
-            if (!link.matches(prefetchBlacklistSelectors.join(', ')) && linkHref && !linkHref.startsWith('javascript:')) {
-              logAction('Prefetching link', link);
-              const prefetchLink = document.createElement('link');
-              prefetchLink.rel = 'prefetch';
-              prefetchLink.href = linkHref;
-              document.head.appendChild(prefetchLink);
-              observer.unobserve(link);
-            }
-          }
-        });
-      });
-
-      // Function to handle re-observation of previously obstructed links
-      function handleVisibilityChange() {
-        document.querySelectorAll('a').forEach(link => {
-          if (link.getBoundingClientRect().width > 0 && link.getBoundingClientRect().height > 0) {
-            logAction('Reobserving link for prefetching', link);
-            prefetchObserver.observe(link);
-          }
-        });
-      }
-
-      // Initial observation of links
-      document.querySelectorAll('a').forEach(link => {
-        const parentMatchesBlacklist = Array.from(link.closest('div, section, article, aside, header, main, footer')?.classList || [])
-          .some(cls => prefetchBlacklistSelectors.includes(`.${cls}`));
-        if (!parentMatchesBlacklist) {
-          logAction('Observing link for prefetching', link);
-          prefetchObserver.observe(link);
-        } else {
-          logAction('Skipped observing blacklisted link', link);
-        }
-      });
-
-      // Observe visibility changes via mutation observer
-      const observer = new MutationObserver(() => handleVisibilityChange());
-      observer.observe(document.body, { childList: true, subtree: true });
-
-      // Recheck visibility on animation and mouse clicks
-      document.addEventListener('animationstart', handleVisibilityChange);
-      document.addEventListener('click', handleVisibilityChange);
 
       // Remove ads and overlays
       const adSelectors = [
@@ -130,6 +39,125 @@
         el.remove();
       });
 
+      // Viewport meta tag for responsiveness
+      const viewportMeta = document.querySelector('meta[name="viewport"]');
+      if (!viewportMeta) {
+        logAction('Adding viewport meta tag');
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+        document.head.appendChild(meta);
+      } else {
+        logAction('Viewport meta tag already present');
+      }
+
+      // Disable video autoplay
+      document.querySelectorAll('video[autoplay]').forEach(video => {
+        logAction('Disabling video autoplay', video);
+        video.removeAttribute('autoplay');
+      });
+
+      // Defer non-essential scripts
+      document.querySelectorAll('script:not([async]):not([defer])').forEach(script => {
+        if (!script.src.includes('critical')) {
+          logAction('Deferring script', script);
+          script.defer = true;
+        }
+      });
+
+      // Setup lazy loading
+      const classPriority = ['header', 'main'];
+      const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            if (classPriority.some(cls => el.classList.contains(cls))) {
+              logAction('Lazy loading element', el);
+              if (el.dataset.src) {
+                el.src = el.dataset.src;
+                el.removeAttribute('data-src');
+              }
+              observer.unobserve(el);
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+        lazyLoadObserver.observe(media);
+      });
+
+      // Setup prefetching with blacklist and media exclusion
+      const prefetchBlacklistSelectors = [
+        '[class*="track"]', '[class*="analytics"]', '[class*="popup"]',
+        '[class*="modal"]', '[class*="overlay"]', '[class*="signup"]',
+        '[class*="paywall"]', '[class*="cookie"]', '[class*="subscribe"]',
+        '[class*="banner"]', '[class*="notification"]', '[class*="announce"]',
+        '[class*="footer"]', '[class*="sidebar"]', '[class*="related"]',
+        '[class*="partner"]', '[class*="admin"]', '[class*="dashboard"]',
+        '[class*="settings"]', '[hidden]', '[class*="hidden"]',
+        '[class*="offscreen"]'
+      ].join(', ');
+
+      const mediaExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm'];
+
+      const isMediaLink = href => mediaExtensions.some(ext => href.endsWith(ext));
+
+      const prefetchObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const link = entry.target;
+            const linkHref = link.href || '';
+            // Check if the link has href, is not blacklisted, is not a media file
+            if (linkHref && !link.matches(prefetchBlacklistSelectors) && !isMediaLink(linkHref)) {
+              if (activePrefetchCount < MAX_PREFETCHES) {
+                logAction('Prefetching link', link);
+                const prefetchLink = document.createElement('link');
+                prefetchLink.rel = 'prefetch';
+                prefetchLink.href = linkHref;
+                document.head.appendChild(prefetchLink);
+                activePrefetchCount++;
+                // Remove from the observer once prefetched
+                observer.unobserve(link);
+              } else {
+                logAction('Prefetch limit reached, skipping link', link);
+              }
+            }
+          }
+        });
+      }, { threshold: 0.1 });
+
+      // Observe links that are in view on load
+      document.querySelectorAll('a[href]').forEach(link => {
+        const linkHref = link.href || '';
+        // Check if the link is not blacklisted, has href, and is not a media file
+        if (linkHref && !link.matches(prefetchBlacklistSelectors) && !isMediaLink(linkHref)) {
+          logAction('Observing link for prefetching', link);
+          prefetchObserver.observe(link);
+        }
+      });
+
+      // MutationObserver to handle visibility changes for hidden or obstructed links
+      const mutationObserver = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+          if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+            const target = mutation.target;
+            if (target.matches('a[href]')) {
+              if (getComputedStyle(target).display !== 'none') {
+                logAction('Element became visible:', target);
+                // Re-observe for prefetching if it was previously observed
+                prefetchObserver.observe(target);
+              }
+            }
+          }
+        }
+      });
+
+      // Observe changes to visibility-related attributes
+      document.querySelectorAll('a[href]').forEach(link => {
+        mutationObserver.observe(link, { attributes: true, attributeFilter: ['style', 'class'] });
+      });
+
       // Use requestIdleCallback for non-critical background tasks
       if ('requestIdleCallback' in window) {
         logAction('Using requestIdleCallback for non-critical tasks');
@@ -140,21 +168,20 @@
         logAction('requestIdleCallback is not supported');
       }
     } catch (error) {
-      console.error('optimizer: Error optimizing page:', error);
+      console.error('Error optimizing page:', error);
     }
   }
 
   // Ensure optimizePage runs as early as possible
   if (document.readyState === 'loading') {
-    console.log('optimizer: Document is loading, adding DOMContentLoaded event listener.');
+    console.log('Document is loading, adding DOMContentLoaded event listener.');
     document.addEventListener('DOMContentLoaded', optimizePage);
   } else {
-    console.log('optimizer: Document is already loaded, running optimizePage.');
+    console.log('Document is already loaded, running optimizePage.');
     requestAnimationFrame(optimizePage);
   }
 
   // Fallback to ensure optimizePage runs if injected late
-  console.log('optimizer: Adding load event listener for fallback.');
+  console.log('Adding load event listener for fallback.');
   window.addEventListener('load', optimizePage);
 })();
-// Version 2.0.8
