@@ -1,11 +1,28 @@
 (function() {
+  // Utility function for logging actions
+  function logAction(action, element) {
+    console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
+  }
+
+  // Throttle function to limit the rate at which a function can be executed
+  function throttle(fn, limit) {
+    let lastCall = 0;
+    return function(...args) {
+      const now = Date.now();
+      if (now - lastCall < limit) return;
+      lastCall = now;
+      fn(...args);
+    };
+  }
+
+  // Function to handle animations
+  const animate = throttle(() => {
+    // Animation code here
+  }, 1000 / 25); // 25 FPS
+
+  // Optimize page function
   function optimizePage() {
     try {
-      // Utility function for logging actions
-      function logAction(action, element) {
-        console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
-      }
-
       // Remove problematic iframes and non-essential scripts
       document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"]').forEach(iframe => {
         logAction('Removing problematic iframe', iframe);
@@ -96,13 +113,19 @@
               prefetchLink.rel = 'prefetch';
               prefetchLink.href = linkHref;
               document.head.appendChild(prefetchLink);
+              observer.unobserve(link);
             }
           }
         });
       }, { threshold: 0.1 });
 
+      // Observe all links
       document.querySelectorAll('a[href]').forEach(link => {
-        prefetchObserver.observe(link);
+        const linkHref = link.href || '';
+        if (linkHref && !link.matches(prefetchBlacklistSelectors) && !isMediaLink(linkHref)) {
+          logAction('Observing link for prefetching', link);
+          prefetchObserver.observe(link);
+        }
       });
 
       // MutationObserver to handle visibility changes for hidden or obstructed links
@@ -122,6 +145,32 @@
         mutationObserver.observe(link, { attributes: true, attributeFilter: ['style', 'class'] });
       });
 
+      // Simplify CSS animations and transitions
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('*').forEach(el => {
+          const computedStyle = getComputedStyle(el);
+
+          // Simplify animations
+          if (computedStyle.animationName && computedStyle.animationName !== 'none') {
+            el.style.animationName = 'none'; // Remove existing animations
+          }
+
+          // Simplify transitions
+          if (computedStyle.transitionProperty && computedStyle.transitionProperty !== 'none') {
+            el.style.transitionProperty = 'none'; // Remove existing transitions
+          }
+        });
+
+        // Apply a simple fade-in effect for visibility
+        document.querySelectorAll('*').forEach(el => {
+          const computedStyle = getComputedStyle(el);
+          if (computedStyle.animationName === 'none' && computedStyle.transitionProperty === 'none') {
+            el.style.transition = 'opacity 1s ease-in-out';
+            el.style.opacity = '1';
+          }
+        });
+      });
+
       // Use requestIdleCallback for non-critical background tasks
       if ('requestIdleCallback' in window) {
         logAction('Using requestIdleCallback for non-critical tasks');
@@ -131,36 +180,11 @@
       } else {
         logAction('requestIdleCallback is not supported');
       }
+
     } catch (error) {
       console.error('Error optimizing page:', error);
     }
   }
-
-  // Simplify CSS animations and transitions
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('*').forEach(el => {
-      const computedStyle = getComputedStyle(el);
-
-      // Simplify animations
-      if (computedStyle.animationName && computedStyle.animationName !== 'none') {
-        el.style.animationName = 'none'; // Remove existing animations
-      }
-
-      // Simplify transitions
-      if (computedStyle.transitionProperty && computedStyle.transitionProperty !== 'none') {
-        el.style.transitionProperty = 'none'; // Remove existing transitions
-      }
-    });
-
-    // Apply a simple fade-in effect for visibility
-    document.querySelectorAll('*').forEach(el => {
-      const computedStyle = getComputedStyle(el);
-      if (computedStyle.animationName === 'none' && computedStyle.transitionProperty === 'none') {
-        el.style.transition = 'opacity 1s ease-in-out';
-        el.style.opacity = '1';
-      }
-    });
-  });
 
   // Ensure optimizePage runs as early as possible
   if (document.readyState === 'loading') {
@@ -174,4 +198,10 @@
   // Fallback to ensure optimizePage runs if injected late
   console.log('Adding load event listener for fallback.');
   window.addEventListener('load', optimizePage);
+
+  // Request animation frame for throttled animations
+  requestAnimationFrame(() => {
+    animate();
+    requestAnimationFrame(() => animate()); // Recursive call to ensure throttle applies
+  });
 })();
