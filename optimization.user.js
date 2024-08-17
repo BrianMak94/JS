@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Page Optimizer
 // @namespace    http://yournamespacehere.com
-// @version      1.0
-// @description  Optimize page load and performance by removing unnecessary elements, deferring scripts, and lazy loading resources.
-// @author       Brian
+// @version      1.1
+// @description  Optimizes page performance by removing non-essential elements, deferring scripts, blocking ads and overlays, and enabling lazy loading.
+// @author       Your Name
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -30,9 +30,28 @@
     // Animation code here
   }, 1000 / 25); // 25 FPS
 
+  // Function to block ads and overlays
+  function blockAdsAndOverlays() {
+    const adSelectors = [
+      '[class*="ad"]', '[class*="ads"]', '[class*="advert"]',
+      '[class*="sponsored"]', '[class*="banner"]', '[class*="promo"]',
+      '[class*="overlay"]', '[class*="popup"]', '[class*="modal"]',
+      '[class*="cookie"]', '[class*="signup"]', '[class*="paywall"]',
+      '[class*="notification"]', '[class*="alert"]'
+    ].join(', ');
+
+    document.querySelectorAll(adSelectors).forEach(el => {
+      logAction('Blocking ad or overlay', el);
+      el.remove();
+    });
+  }
+
   // Optimize page function
   function optimizePage() {
     try {
+      // Block ads and overlays
+      blockAdsAndOverlays();
+
       // Remove problematic iframes and non-essential scripts
       document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"]').forEach(iframe => {
         logAction('Removing problematic iframe', iframe);
