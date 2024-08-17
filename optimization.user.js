@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Enhanced Page Optimizer
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Optimizes page by removing ads, overlays, and applying various performance improvements
 // @match        *://*/*
 // @grant        none
@@ -34,7 +34,7 @@
   // Function to block ads and overlays
   function blockAdsAndOverlays() {
     const adSelectors = [
-      '[class*="ad-"]', '[class*="ads-"]', '[class*="-ad"]',
+      '[class^="ad-"]', '[class^="ads-"]', '[class$="-ad"]',
       '[class*="overlay"]', '[class*="popup"]', '[class*="modal"]',
       '[class*="banner"]', '[class*="notification"]'
     ].join(', ');
