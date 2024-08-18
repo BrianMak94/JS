@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Enhanced Page Optimizer
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.5
 // @description  Optimizes page by applying various performance improvements
 // @match        *://*/*
 // @grant        none
@@ -15,18 +15,6 @@
     console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
   }
 
-  // Throttle function to limit the rate at which a function can be executed
-  function throttle(fn, limit) {
-    let lastCall = 0;
-    return function(...args) {
-      const now = Date.now();
-      if (now - lastCall >= limit) {
-        lastCall = now;
-        fn(...args);
-      }
-    };
-  }
-
   // Handle animations and transitions
   function simplifyAnimations() {
     document.querySelectorAll('*').forEach(el => {
@@ -36,6 +24,30 @@
       if (style.animationName === 'none' && style.transitionProperty === 'none') {
         el.style.transition = 'opacity 1s ease-in-out';
         el.style.opacity = '1';
+      }
+    });
+  }
+
+  // Remove empty containers
+  function removeEmptyContainers() {
+    document.querySelectorAll('*').forEach(el => {
+      if (el.childElementCount === 0 && el.textContent.trim() === '') {
+        logAction('Removing empty container', el);
+        el.remove();
+      }
+    });
+  }
+
+  // Remove containers with failed-to-load items
+  function removeFailedLoadContainers() {
+    document.querySelectorAll('*').forEach(el => {
+      const hasFailedChildren = Array.from(el.children).some(child => {
+        return (child.tagName === 'IMG' || child.tagName === 'VIDEO') && !child.complete;
+      });
+
+      if (hasFailedChildren) {
+        logAction('Removing container with failed-to-load items', el);
+        el.remove();
       }
     });
   }
@@ -128,6 +140,10 @@
       // Simplify animations and transitions
       simplifyAnimations();
 
+      // Remove empty containers and failed load containers
+      removeEmptyContainers();
+      removeFailedLoadContainers();
+
       // Use requestIdleCallback for non-critical background tasks
       if ('requestIdleCallback' in window) {
         logAction('Using requestIdleCallback for non-critical tasks');
@@ -155,7 +171,6 @@
 
   // Request animation frame for throttled animations
   requestAnimationFrame(function animate() {
-    throttle(() => {}, 1000 / 25)(); // Throttle function is a no-op to ensure animation frame is requested
-    requestAnimationFrame(animate);
+    requestAnimationFrame(animate); // Recursive call to ensure animation frame is requested
   });
 })();
