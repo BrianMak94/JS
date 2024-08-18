@@ -16,16 +16,25 @@
     console.log(`optimizer: ${action}: ${element ? element.className || element.src || element.href : ''}`);
   }
 
+  // Throttle function to limit the rate at which a function can be executed
+  function throttle(fn, limit) {
+    let lastCall = 0;
+    return function(...args) {
+      const now = Date.now();
+      if (now - lastCall >= limit) {
+        lastCall = now;
+        fn(...args);
+      }
+    };
+  }
+
   // Handle animations and transitions
   function simplifyAnimations() {
     document.querySelectorAll('*').forEach(el => {
       const style = getComputedStyle(el);
       if (style.animationName !== 'none') el.style.animationName = 'none';
       if (style.transitionProperty !== 'none') el.style.transitionProperty = 'none';
-      if (style.animationName === 'none' && style.transitionProperty === 'none') {
-        el.style.transition = 'opacity 1s ease-in-out';
-        el.style.opacity = '1';
-      }
+      // Removed the code that might cause unintended style application
     });
   }
 
@@ -144,6 +153,7 @@
 
   // Request animation frame for throttled animations
   requestAnimationFrame(function animate() {
-    requestAnimationFrame(animate); // Recursive call to ensure animation frame is requested
+    throttle(() => {}, 1000 / 25)(); // Throttle function is a no-op to ensure animation frame is requested
+    requestAnimationFrame(animate);
   });
 })();
