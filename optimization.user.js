@@ -76,16 +76,6 @@
       });
       unusedStyles.forEach(style => style.remove());
 
-      // Viewport meta tag for responsiveness
-      const viewportMeta = document.querySelector('meta[name="viewport"]');
-      if (!viewportMeta) {
-        logAction('Adding viewport meta tag');
-        const meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, viewport-fit=cover';
-        document.head.appendChild(meta);
-      }
-
       // Disable video autoplay
       document.querySelectorAll('video[autoplay]').forEach(video => {
         logAction('Disabling video autoplay', video);
