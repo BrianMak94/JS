@@ -5,7 +5,7 @@
 // @description  Optimizes page by applying various performance improvements
 // @match        *://*/*
 // @grant        none
-// @run-at: document-start
+// @run-at       document-start
 // ==/UserScript==
 
 (function() {
