@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Enhanced Page Optimizer
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Optimizes page by applying various performance improvements
 // @match        *://*/*
 // @grant        none
@@ -10,6 +10,25 @@
 
 (function() {
   'use strict';
+
+  // Load FastDOM for efficient DOM manipulation
+  const fastdom = (function() {
+    let reads = [], writes = [];
+
+    function rafLoop() {
+      let task;
+      while (task = reads.shift()) task();
+      while (task = writes.shift()) task();
+      requestAnimationFrame(rafLoop);
+    }
+
+    requestAnimationFrame(rafLoop);
+
+    return {
+      measure: fn => reads.push(fn),
+      mutate: fn => writes.push(fn)
+    };
+  })();
 
   // Utility function for logging actions
   function logAction(action, element) {
@@ -30,11 +49,12 @@
 
   // Handle animations and transitions
   function simplifyAnimations() {
-    document.querySelectorAll('*').forEach(el => {
-      const style = getComputedStyle(el);
-      if (style.animationName !== 'none') el.style.animationName = 'none';
-      if (style.transitionProperty !== 'none') el.style.transitionProperty = 'none';
-      // Removed the code that might cause unintended style application
+    fastdom.mutate(() => {
+      document.querySelectorAll('*').forEach(el => {
+        const style = getComputedStyle(el);
+        if (style.animationName !== 'none') el.style.animationName = 'none';
+        if (style.transitionProperty !== 'none') el.style.transitionProperty = 'none';
+      });
     });
   }
 
@@ -42,15 +62,19 @@
   function optimizePage() {
     try {
       // Remove iframes and scripts related to ads or tracking
-      document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"], script:not([src*="essential"])').forEach(el => {
-        logAction('Removing', el);
-        el.remove();
+      fastdom.mutate(() => {
+        document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"], script:not([src*="essential"])').forEach(el => {
+          logAction('Removing', el);
+          el.remove();
+        });
       });
 
       // Disable video autoplay
-      document.querySelectorAll('video[autoplay]').forEach(video => {
-        logAction('Disabling video autoplay', video);
-        video.removeAttribute('autoplay');
+      fastdom.mutate(() => {
+        document.querySelectorAll('video[autoplay]').forEach(video => {
+          logAction('Disabling video autoplay', video);
+          video.removeAttribute('autoplay');
+        });
       });
 
       // Lazy loading setup
@@ -58,18 +82,22 @@
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const el = entry.target;
-            if (el.dataset.src) {
-              logAction('Lazy loading element', el);
-              el.src = el.dataset.src;
-              el.removeAttribute('data-src');
-            }
+            fastdom.mutate(() => {
+              if (el.dataset.src) {
+                logAction('Lazy loading element', el);
+                el.src = el.dataset.src;
+                el.removeAttribute('data-src');
+              }
+            });
             lazyLoadObserver.unobserve(el);
           }
         });
       });
 
-      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
-        lazyLoadObserver.observe(media);
+      fastdom.measure(() => {
+        document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+          lazyLoadObserver.observe(media);
+        });
       });
 
       // Prefetching setup
@@ -89,21 +117,25 @@
             const href = link.href || '';
             if (href && !link.matches(prefetchBlacklistSelectors) && !isMediaLink(href)) {
               logAction('Prefetching link', link);
-              const prefetchLink = document.createElement('link');
-              prefetchLink.rel = 'prefetch';
-              prefetchLink.href = href;
-              document.head.appendChild(prefetchLink);
+              fastdom.mutate(() => {
+                const prefetchLink = document.createElement('link');
+                prefetchLink.rel = 'prefetch';
+                prefetchLink.href = href;
+                document.head.appendChild(prefetchLink);
+              });
               prefetchObserver.unobserve(link);
             }
           }
         });
       }, { threshold: 0.1 });
 
-      document.querySelectorAll('a[href]').forEach(link => {
-        if (!link.matches(prefetchBlacklistSelectors) && !isMediaLink(link.href || '')) {
-          logAction('Observing link for prefetching', link);
-          prefetchObserver.observe(link);
-        }
+      fastdom.measure(() => {
+        document.querySelectorAll('a[href]').forEach(link => {
+          if (!link.matches(prefetchBlacklistSelectors) && !isMediaLink(link.href || '')) {
+            logAction('Observing link for prefetching', link);
+            prefetchObserver.observe(link);
+          }
+        });
       });
 
       // MutationObserver for visibility changes
@@ -113,14 +145,16 @@
             const target = mutation.target;
             if (target.matches('a[href]') && getComputedStyle(target).display !== 'none') {
               logAction('Element became visible:', target);
-              prefetchObserver.observe(target);
+              fastdom.measure(() => prefetchObserver.observe(target));
             }
           }
         });
       });
 
-      document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
-        mutationObserver.observe(media, { attributes: true, attributeFilter: ['style', 'class'] });
+      fastdom.measure(() => {
+        document.querySelectorAll('img[data-src], video[data-src]').forEach(media => {
+          mutationObserver.observe(media, { attributes: true, attributeFilter: ['style', 'class'] });
+        });
       });
 
       // Simplify animations and transitions
