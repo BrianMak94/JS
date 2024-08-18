@@ -205,7 +205,7 @@
       console.error('Error optimizing page:', error);
     }
   }
-  optimizePage();
+  
   // Ensure optimizePage runs as early as possible
   if (document.readyState === 'loading') {
     console.log('Document is loading, adding DOMContentLoaded event listener.');
