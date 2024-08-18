@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Enhanced Page Optimizer
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.7
 // @description  Optimizes page by applying various performance improvements
 // @match        *://*/*
 // @grant        none
