@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Enhanced Page Optimizer
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.3
 // @description  Optimizes page by applying various performance improvements
 // @match        *://*/*
 // @grant        none
@@ -24,30 +24,6 @@
       if (style.animationName === 'none' && style.transitionProperty === 'none') {
         el.style.transition = 'opacity 1s ease-in-out';
         el.style.opacity = '1';
-      }
-    });
-  }
-
-  // Remove empty containers
-  function removeEmptyContainers() {
-    document.querySelectorAll('*').forEach(el => {
-      if (el.childElementCount === 0 && el.textContent.trim() === '') {
-        logAction('Removing empty container', el);
-        el.remove();
-      }
-    });
-  }
-
-  // Remove containers with failed-to-load items
-  function removeFailedLoadContainers() {
-    document.querySelectorAll('*').forEach(el => {
-      const hasFailedChildren = Array.from(el.children).some(child => {
-        return (child.tagName === 'IMG' || child.tagName === 'VIDEO') && !child.complete;
-      });
-
-      if (hasFailedChildren) {
-        logAction('Removing container with failed-to-load items', el);
-        el.remove();
       }
     });
   }
@@ -139,10 +115,6 @@
 
       // Simplify animations and transitions
       simplifyAnimations();
-
-      // Remove empty containers and failed load containers
-      removeEmptyContainers();
-      removeFailedLoadContainers();
 
       // Use requestIdleCallback for non-critical background tasks
       if ('requestIdleCallback' in window) {
