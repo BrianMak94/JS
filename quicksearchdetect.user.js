@@ -1,33 +1,41 @@
 // ==UserScript==
-// @name         Enable Quick Search Detection
+// @name         Perplexity Quick Search Detection
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Enhance search field detection for Safari's Quick Website Search
+// @description  Modify Perplexity to enable Quick Website Search detection in iOS Safari
 // @author       Your Name
-// @match        *://*/*  // Change this to target specific websites
+// @match        https://www.perplexity.ai/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // Function to create a search field if it doesn't exist
-    function createSearchField() {
-        // Modify this selector to match the specific search input field of the website
-        const searchFieldSelector = 'input[type="search"], input[name="q"], input[name="search"]';
-        const searchField = document.querySelector(searchFieldSelector);
+    // Create a hidden form to help Safari detect the search functionality
+    const searchForm = document.createElement('form');
+    searchForm.setAttribute('action', 'https://www.perplexity.ai/search'); // Adjust this to the correct search URL
+    searchForm.setAttribute('method', 'GET');
 
-        if (searchField) {
-            // Add an event listener to the search field
-            searchField.addEventListener('input', function() {
-                // This will trigger the search functionality
-                console.log('Search input detected:', searchField.value);
-            });
-        } else {
-            console.warn('Search field not found on this page.');
+    const searchInput = document.createElement('input');
+    searchInput.setAttribute('type', 'text');
+    searchInput.setAttribute('name', 'q'); // This name should match the expected query parameter for the search
+    searchInput.setAttribute('placeholder', 'Search Perplexity...'); // Optional placeholder text
+
+    // Append the input to the form
+    searchForm.appendChild(searchInput);
+
+    // Append the form to the body (hidden)
+    searchForm.style.display = 'none'; // Hide the form
+    document.body.appendChild(searchForm);
+
+    // Optional: Trigger the search when the input is used
+    searchInput.addEventListener('input', function() {
+        if (searchInput.value) {
+            // Uncomment the next line if you want to automatically submit the form when typing
+            // searchForm.submit();
+            console.log('Search input detected:', searchInput.value);
         }
-    }
+    });
 
-    // Run the function to create the search field detection
-    createSearchField();
+    console.log('Perplexity Quick Search Detection script loaded.');
 })();
