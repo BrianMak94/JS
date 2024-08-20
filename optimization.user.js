@@ -61,13 +61,6 @@
   // Optimize page function
   function optimizePage() {
     try {
-      // Remove iframes and scripts related to ads or tracking
-      fastdom.mutate(() => {
-        document.querySelectorAll('iframe[src*="ads"], iframe[src*="track"], iframe[src*="analytics"], script:not([src*="essential"])').forEach(el => {
-          logAction('Removing', el);
-          el.remove();
-        });
-      });
 
       // Disable video autoplay
       fastdom.mutate(() => {
