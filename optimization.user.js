@@ -11,6 +11,22 @@
 (function() {
   'use strict';
 
+    // Disable webfonts
+    var style = document.createElement('style');
+    style.innerHTML = '@font-face { font-family: ""; }';
+    document.head.appendChild(style);
+
+    // Force viewport scale to 1
+    var viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (viewportMeta) {
+        viewportMeta.content = 'width=device-width, initial-scale=1';
+
+    } else {
+        var viewportMeta = document.createElement('meta');
+        viewportMeta.name = 'viewport';
+        viewportMeta.content = 'width=device-width, initial-scale=1';
+        document.head.appendChild(viewportMeta); 1
+
   // Load FastDOM for efficient DOM manipulation
   const fastdom = (function() {
     let reads = [], writes = [];
