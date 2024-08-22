@@ -11,11 +11,6 @@
 (function() {
   'use strict';
 
-    // Disable webfonts
-    var style = document.createElement('style');
-    style.innerHTML = '@font-face { font-family: ""; }';
-    document.head.appendChild(style);
-
     // Force viewport scale to 1
     var viewportMeta = document.querySelector('meta[name="viewport"]');
     if (viewportMeta) {
