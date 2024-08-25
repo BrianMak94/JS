@@ -21,7 +21,8 @@
         viewportMeta.name = 'viewport';
         viewportMeta.content = 'width=device-width, initial-scale=1';
         document.head.appendChild(viewportMeta); 1
-
+    }
+  
   // Load FastDOM for efficient DOM manipulation
   const fastdom = (function() {
     let reads = [], writes = [];
