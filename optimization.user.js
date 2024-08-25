@@ -14,7 +14,7 @@
     // Force viewport scale to 1
     var viewportMeta = document.querySelector('meta[name="viewport"]');
     if (viewportMeta) {
-        viewportMeta.content = 'width=device-width, initial-scale=1';
+        viewportMeta.content = 'width=device-width, initial-scale=1, maximum-scale=1';
 
     } else {
         var viewportMeta = document.createElement('meta');
