@@ -19,7 +19,7 @@
     } else {
         var viewportMeta = document.createElement('meta');
         viewportMeta.name = 'viewport';
-        viewportMeta.content = 'width=device-width, initial-scale=1';
+        viewportMeta.content = 'width=device-width, initial-scale=1， maximum-scale=1';
         document.head.appendChild(viewportMeta); 1
     }
   
