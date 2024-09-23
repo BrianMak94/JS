@@ -73,7 +73,7 @@
   // Function to identify and block overlays
   function blockOverlays() {
     fastdom.mutate(() => {
-      const overlays = document.querySelectorAll('*[overlay]');
+      const overlays = document.querySelectorAll('[overlay], [class*="overlay"], [id*="overlay"]');
       overlays.forEach(overlay => {
         logAction('Blocking overlay:', overlay);
         overlay.style.display = 'none'; // Hide the overlay
