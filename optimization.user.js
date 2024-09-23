@@ -70,10 +70,24 @@
     });
   }
 
+  // Function to identify and block overlays
+  function blockOverlays() {
+    fastdom.mutate(() => {
+      const overlays = document.querySelectorAll('*[overlay]');
+      overlays.forEach(overlay => {
+        logAction('Blocking overlay:', overlay);
+        overlay.style.display = 'none'; // Hide the overlay
+        // You can also add additional logic here, like removing the element from the DOM
+      });
+    });
+  }
+
   // Optimize page function
   function optimizePage() {
     try {
-
+      // Block overlays
+      blockOverlays();
+      
       // Disable video autoplay
       fastdom.mutate(() => {
         document.querySelectorAll('video[autoplay]').forEach(video => {
