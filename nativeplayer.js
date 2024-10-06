@@ -1,3 +1,10 @@
+(function() {
+    'use strict';
+
+    // Check if we're on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    if (isIOS) {
         // Find all iframe elements containing videos
         const iframes = document.querySelectorAll('iframe[src*="video"]');
 
@@ -9,3 +16,5 @@
             iframe.style.oAllowFullScreen = 'true';
             iframe.style.allowFullScreen = 'true';
         });
+    }
+})();
