@@ -1,30 +1,11 @@
-(function() {
-  function act() {
-    let v = document.querySelector('video');
+        // Find all iframe elements containing videos
+        const iframes = document.querySelectorAll('iframe[src*="video"]');
 
-    if (!v) {
-      return; // Exit if video element is not found
-    }
-
-    v.addEventListener('webkitpresentationmodechanged', (e) => {
-      e.stopPropagation();
-      console.log('stop prop');
-    }, true);
-
-    // Set the 'pip-mode' attribute to 'true'
-    v.setAttribute('pip-mode', 'true');
-
-    // Use `webkitSetPresentationMode` to force native player
-    v.webkitSetPresentationMode('inline');
-    console.log('forced native player');
-  }
-
-  function helper() {
-    let vid = document.querySelector('video');
-    if (vid && vid.getAttribute('pip-mode') !== 'true') {
-      act();
-    }
-  }
-
-  setInterval(() => helper(), 1000);
-})();
+        // Loop through each iframe and force the native player
+        iframes.forEach(iframe => {
+            iframe.style.webkitAllowFullScreen = 'true';
+            iframe.style.mozAllowFullScreen = 'true';
+            iframe.style.msAllowFullScreen = 'true';
+            iframe.style.oAllowFullScreen = 'true';
+            iframe.style.allowFullScreen = 'true';
+        });
