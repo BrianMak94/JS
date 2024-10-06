@@ -10,11 +10,12 @@
 
         // Loop through each iframe and force the native player
         iframes.forEach(iframe => {
-            iframe.style.webkitAllowFullScreen = 'true';
-            iframe.style.mozAllowFullScreen = 'true';
-            iframe.style.msAllowFullScreen = 'true';
-            iframe.style.oAllowFullScreen = 'true';
-            iframe.style.allowFullScreen = 'true';
+            // Set the `playsinline` attribute to prevent full-screen mode
+            iframe.setAttribute('playsinline', '');
+
+            // Create a custom event to trigger the native player
+            const event = new Event('load', { bubbles: true });
+            iframe.dispatchEvent(event);
         });
     }
 })();
