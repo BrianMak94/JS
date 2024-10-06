@@ -13,11 +13,6 @@
   const nativePlayerScript = `
     (function() {
       'use strict';
-
-      // Check if we're on iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isIOS) {
         // Set the 'playsinline' attribute to prevent full-screen mode
         const video = document.querySelector('video');
         video.setAttribute('playsinline', '');
@@ -25,7 +20,7 @@
         // Trigger the native player
         video.load();
       }
-    })();
+  )();
   `;
 
   // Find all iframe elements containing videos
